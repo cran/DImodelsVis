@@ -14,6 +14,8 @@ gradient_change(
   y_var = ".Pred",
   pie_data = NULL,
   pie_colours = NULL,
+  pie_radius = 0.25,
+  points_size = 3,
   facet_var = NULL,
   nrow = 0,
   ncol = 0
@@ -65,6 +67,12 @@ pie-glyphs.}
 
 \item{pie_colours}{A character vector specifying the colours for the slices
 within the pie-glyphs.}
+
+\item{pie_radius}{A numeric value specifying the radius (in cm) for the
+pie-glyphs.}
+
+\item{points_size}{A numeric value specifying the size of points (when
+pie-glyphs not shown) shown in the plots.}
 
 \item{facet_var}{A character string or numeric index identifying the column
 in the data to be used for faceting the plot into multiple

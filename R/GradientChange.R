@@ -236,10 +236,8 @@ gradient_change_data <- function(data, prop, add_var = list(),
 #'                                   prop = c("p1", "p2", "p3",
 #'                                            "p4", "p5", "p6"),
 #'                                   model = mod)
-#' gradient_change_plot(data = plot_data,
-#'                      prop = c("p1", "p2", "p3", "p4", "p5", "p6"))
 #'
-#' ## If prop is not specified then the observations will be shows as points
+#' ## Create plot
 #' gradient_change_plot(data = plot_data)
 #'
 #' ## Average response with respect to evenness
@@ -248,13 +246,20 @@ gradient_change_data <- function(data, prop, add_var = list(),
 #'                                            "p4", "p5", "p6"),
 #'                                   model = mod,
 #'                                   gradient = "evenness")
+#' gradient_change_plot(data = plot_data)
+#'
+#' ## Can also manually specify prop variables
+#' ## Add grouped proportions to data
+#' plot_data <- group_prop(plot_data,
+#'                        prop = c("p1", "p2", "p3", "p4", "p5", "p6"),
+#'                        FG = c("Gr", "Gr", "Le", "Le", "He", "He"))
+#' ## Manually specify prop to show in pie-glyphs
 #' gradient_change_plot(data = plot_data,
-#'                      prop = c("p1", "p2", "p3", "p4", "p5", "p6"))
+#'                      prop = c("Gr", "Le", "He"))
 #'
 #' ## Don't show line indicating the average change by using `average = FALSE` and
 #' ## Change colours of the pie-slices using `pie_colours`
 #' gradient_change_plot(data = plot_data,
-#'                      prop = c("p1", "p2", "p3", "p4", "p5", "p6"),
 #'                      average = FALSE,
 #'                      pie_colours = c("darkolivegreen1", "darkolivegreen4",
 #'                                      "orange1", "orange4",
@@ -268,7 +273,6 @@ gradient_change_data <- function(data, prop, add_var = list(),
 #' ## a subset of the data specified in `data`.#'
 #' ## Also use `facet_var` to facet the plot on an additional variable
 #' gradient_change_plot(data = plot_data,
-#'                      prop = c("p1", "p2", "p3", "p4", "p5", "p6"),
 #'                      pie_data = plot_data %>% filter(.Richness %in% c(1, 6)),
 #'                      facet_var = "treatment")
 #'
@@ -283,7 +287,6 @@ gradient_change_data <- function(data, prop, add_var = list(),
 #'                                   add_var = list("treatment" = c(50, 250)))
 #' ## Create plot arranged in 2 columns
 #' gradient_change_plot(data = plot_data,
-#'                      prop = c("p1", "p2", "p3", "p4", "p5", "p6"),
 #'                      pie_data = plot_data %>% filter(.Richness %in% c(1, 6)),
 #'                      ncol = 2)
 #'
@@ -297,6 +300,8 @@ gradient_change_data <- function(data, prop, add_var = list(),
 #' head(plot_data)
 #' ## Call the plotting function by specifying the variable you we wish to
 #' ## plot on the Y-axis by using the argument `y_var`
+#' ## Since this data wasn't created using `gradient_change_data`
+#' ## `prop` should be manually specified
 #' gradient_change_plot(data = plot_data, y_var = "response",
 #'                      prop = c("p1", "p2", "p3",
 #'                               "p4", "p5", "p6"))
@@ -304,6 +309,8 @@ gradient_change_data <- function(data, prop, add_var = list(),
 gradient_change_plot <- function(data, prop = NULL,
                                  pie_data = NULL,
                                  pie_colours = NULL,
+                                 pie_radius = 0.25,
+                                 points_size = 3,
                                  average = TRUE,
                                  y_var = ".Pred",
                                  facet_var = NULL,
@@ -321,13 +328,15 @@ gradient_change_plot <- function(data, prop = NULL,
     ids <- unique(data$.add_str_ID)
     plots <- lapply(cli_progress_along(1:length(ids), name = "Creating plot",
                                        format = paste0(
-                                         "{pb_spin} Creating plot ",
-                                         "[{pb_current}/{pb_total}]  ETA:{pb_eta}"
+                                         "{cli::pb_spin} Creating plot ",
+                                         "[{cli::pb_current}/{cli::pb_total}]  ETA:{cli::pb_eta}"
                                        )),
                     function(i){
                       data_iter <- data %>% filter(.data$.add_str_ID == ids[i])
                       gradient_change_plot_internal(data = data_iter, prop = prop,
                                                     pie_colours = pie_colours,
+                                                    pie_radius = pie_radius,
+                                                    points_size = points_size,
                                                     facet_var = facet_var,
                                                     y_var = y_var,
                                                     average = average,
@@ -345,6 +354,8 @@ gradient_change_plot <- function(data, prop = NULL,
   } else {
     plot <- gradient_change_plot_internal(data = data, prop = prop,
                                           pie_colours = pie_colours,
+                                          pie_radius = pie_radius,
+                                          points_size = points_size,
                                           facet_var = facet_var,
                                           y_var = y_var,
                                           average = average,
@@ -504,6 +515,8 @@ gradient_change <- function(model, data = NULL,
                             y_var = ".Pred",
                             pie_data = NULL,
                             pie_colours = NULL,
+                            pie_radius = 0.25,
+                            points_size = 3,
                             facet_var = NULL,
                             nrow = 0, ncol = 0){
   # Ensure specified model is fit using the DI function
@@ -518,11 +531,8 @@ gradient_change <- function(model, data = NULL,
   original_data <- model$original_data
 
   # Get all species in the model
-  if(inherits(model, "DI")){
-    model_species <- eval(model$DIcall$prop)
-  } else if(inherits(model, "DImulti")){
-    model_species <- attr(model, "prop")
-  }
+  model_species <- attr(model, "prop")
+
   # If species were specified as column indices extract names
   if(is.numeric(model_species)){
     model_species <- colnames(original_data)[model_species]
@@ -579,11 +589,7 @@ gradient_change <- function(model, data = NULL,
   }
 
   # Get functional groups
-  if(inherits(model, "DI")){
-      FG <- eval(model$DIcall$FG)
-  } else {
-      FG <- attr(model, "FG")
-  }
+  FG <- attr(model, "FG")
 
   # Colours for species
   if(is.null(pie_colours)){
@@ -595,6 +601,8 @@ gradient_change <- function(model, data = NULL,
                                  prop = prop,
                                  pie_data = pie_data,
                                  pie_colours = pie_colours,
+                                 pie_radius = pie_radius,
+                                 points_size = points_size,
                                  average = average,
                                  facet_var = facet_var,
                                  y_var = y_var,
@@ -613,6 +621,8 @@ NULL
 gradient_change_plot_internal <- function(data, prop = NULL,
                                           pie_data = NULL,
                                           pie_colours = NULL,
+                                          pie_radius = 0.25,
+                                          points_size = 3,
                                           average = TRUE,
                                           y_var = ".Pred",
                                           facet_var = NULL){
@@ -624,7 +634,9 @@ gradient_change_plot_internal <- function(data, prop = NULL,
 
   # Ensure inputs are appropriate
   sanity_checks(data = data, prop = prop, colours = pie_colours,
-                booleans = list("average" = average))
+                booleans = list("average" = average),
+                numerics = list("points_size" = points_size,
+                                "pie_radius" = pie_radius))
 
   # If pie_data is specified then prop cannot be NULL
   if(!is.null(pie_data) && is.null(prop)){
@@ -676,7 +688,10 @@ gradient_change_plot_internal <- function(data, prop = NULL,
   # Create plot
   plot <- ggplot(data = data, aes(x = !! sym(gradient_var), y = !! sym(y_var)))+
     geom_point(aes(group = .data$.Evenness),
-               colour = '#555555',
+               fill = '#555555',
+               colour = "#000000",
+               pch = 21, stroke = 1,
+               size = points_size,
                position = position)+
     labs(x = xlab,
          y = ifelse(y_var == ".Pred", "Predicted Response", y_var),
@@ -737,7 +752,7 @@ gradient_change_plot_internal <- function(data, prop = NULL,
 
     plot <- plot +
       geom_pie_glyph(aes(group = .data$.Evenness),
-                     slices = prop,
+                     slices = prop, radius = pie_radius,
                      colour = 'black', data = pie_data,
                      position = position)+
       scale_fill_manual(values = pie_colours, name = "Variables")

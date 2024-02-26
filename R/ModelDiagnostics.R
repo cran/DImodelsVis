@@ -244,7 +244,7 @@ model_diagnostics <- function(model, which = c(1,2,3,5), prop = NULL, FG = NULL,
 
   # Colours for the pie-glyph slices
   if(pies && is.null(pie_colours)){
-    colours <- get_colours(model_species, FG = if(is.null(FG)) eval(model$DIcall$FG) else FG)
+    colours <- get_colours(model_species, FG = if(is.null(FG)) attr(model, "FG") else FG)
   } else if (pies && !is.null(pie_colours)){
     # sanity_checks(colours = pie_colours)
     if(length(pie_colours) != length(model_species)){
@@ -266,8 +266,8 @@ model_diagnostics <- function(model, which = c(1,2,3,5), prop = NULL, FG = NULL,
     # Progress bar to be shown if plots take long time
     p_bar <- cli_progress_bar(
       total = length(which),
-      format = "Creating plot {pb_current} of {pb_total} |
-             {pb_bar} {pb_percent} | ETA: {pb_eta}"
+      format = "Creating plot {cli::pb_current} of {cli::pb_total} |
+             {cli::pb_bar} {cli::pb_percent} | ETA: {cli::pb_eta}"
     )
 
     plots <- list()
@@ -278,7 +278,7 @@ model_diagnostics <- function(model, which = c(1,2,3,5), prop = NULL, FG = NULL,
 
       # Base plot with points and other aesthetics
       pl <- ggplot(plot_data, aes(.data$.fitted, .data$.resid))+
-        theme_bw()+
+        theme_DI()+
         geom_point(size = 3)+
         geom_line(data = smoothing_line,
                   aes(x = .data$x, y = .data$y),
@@ -314,7 +314,7 @@ model_diagnostics <- function(model, which = c(1,2,3,5), prop = NULL, FG = NULL,
 
     if(show[2L]){
       pl <- ggplot(plot_data, aes(.data$.qq, .data$.stdresid))+
-        theme_bw()+
+        theme_DI()+
         geom_point(size = 3, na.rm = TRUE)+
         geom_abline(slope = qq_slope, intercept = qq_intercept)
 
@@ -349,7 +349,7 @@ model_diagnostics <- function(model, which = c(1,2,3,5), prop = NULL, FG = NULL,
                                       sqrt(abs(plot_data$.stdresid)))
 
       pl <- ggplot(plot_data, aes(.data$.fitted, sqrt(abs(.data$.stdresid))))+
-        theme_bw()+
+        theme_DI()+
         geom_point(size = 3, na.rm=TRUE)+
         geom_line(data = smoothing_line,
                   aes(x = .data$x, y = .data$y),
@@ -383,7 +383,7 @@ model_diagnostics <- function(model, which = c(1,2,3,5), prop = NULL, FG = NULL,
 
     if(show[4L]){
       pl <- ggplot(plot_data, aes(x = .data$Obs, y = .data$.cooksd))+
-        theme_bw()+
+        theme_DI()+
         geom_point(size = 3)+
         geom_linerange(aes(ymax = .data$.cooksd, ymin = 0),
                        linewidth = 1)
@@ -444,7 +444,7 @@ model_diagnostics <- function(model, which = c(1,2,3,5), prop = NULL, FG = NULL,
       smoothing_line <- smoothing_fun(plot_data$.hat, plot_data$.stdresid)
 
       panel_plot <- ggplot(plot_data, aes(.data$.hat, .data$.stdresid))+
-        theme_bw()+
+        theme_DI()+
         geom_point(size = 3, na.rm=TRUE)+
         geom_line(data = smoothing_line,
                   aes(x = .data$x, y = .data$y),
@@ -499,7 +499,7 @@ model_diagnostics <- function(model, which = c(1,2,3,5), prop = NULL, FG = NULL,
       smoothing_line <- smoothing_fun(plot_data$.hat, plot_data$.cooksd)
 
       panel_plot <- ggplot(plot_data, aes(.data$.hat, .data$.cooksd)) +
-        theme_bw()+
+        theme_DI()+
         geom_point(size = 3, na.rm=TRUE)+
         geom_line(data = smoothing_line,
                   aes(x = .data$x, y = .data$y),

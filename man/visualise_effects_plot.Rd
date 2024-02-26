@@ -8,6 +8,7 @@ visualise_effects_plot(
   data,
   prop,
   pie_colours = NULL,
+  pie_radius = 0.3,
   se = FALSE,
   average = TRUE,
   nrow = 0,
@@ -27,6 +28,9 @@ specifying the values.}
 in the pie-glyphs. \cr
 If left NULL, the colour blind friendly colours will be
 for the pie-glyph slices.}
+
+\item{pie_radius}{A numeric value specifying the radius (in cm) for the
+pie-glyphs. Default is 0.3 cm.}
 
 \item{se}{A boolean variable indicating whether to plot confidence intervals associated with
 the effect of species increase or decrease}
@@ -73,19 +77,18 @@ plot_data <- visualise_effects_data(data = sim1[sim1$block == 1, ],
                                     effect = "increase", model = mod)
 
 ## Create plot
-visualise_effects_plot(data = plot_data,
-                       prop = c("p1", "p2", "p3", "p4"))
+visualise_effects_plot(data = plot_data)
 
 ## Show specific curves with prediction intervals
 subset <- custom_filter(plot_data, .Group \%in\% c(7, 15))
 visualise_effects_plot(data = subset, prop = 1:4, se = TRUE)
 
 ## Do not show average effect line
-visualise_effects_plot(data = subset, prop = 1:4,
+visualise_effects_plot(data = subset,
                        se = TRUE, average = FALSE)
 
 ## Change colours of the pie-glyph slices
-visualise_effects_plot(data = subset, prop = 1:4,
+visualise_effects_plot(data = subset,
                        pie_colours = c("darkolivegreen", "darkolivegreen1",
                                    "steelblue4", "steelblue1"))
 
@@ -99,8 +102,7 @@ plot_data <- visualise_effects_data(data = sim1[c(1, 5, 9, 13), 3:6],
                                     add_var = list("block" = c(1, 2)))
 
 visualise_effects_plot(data = plot_data,
-                       prop = c("p1", "p2", "p3", "p4"),
                        average = FALSE,
                        pie_colours = c("darkolivegreen", "darkolivegreen1",
-                                   "steelblue4", "steelblue1"))
+                                       "steelblue4", "steelblue1"))
 }

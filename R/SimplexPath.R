@@ -255,30 +255,30 @@ simplex_path_data <- function(starts, ends, prop,
 #'                                ends = sim2[c(47, 52, 55, 60), ],
 #'                                prop = c("p1", "p2", "p3", "p4"),
 #'                                model = mod)
-#' simplex_path_plot(data = plot_data, prop = c("p1", "p2", "p3", "p4"))
+#' ## prop will be inferred from data
+#' simplex_path_plot(data = plot_data)
 #'
 #' ## Show specific curves
-#' simplex_path_plot(data = plot_data[plot_data$.Group %in% c(1, 4), ],
-#'                   prop = c("p1", "p2", "p3", "p4"))
+#' simplex_path_plot(data = plot_data[plot_data$.Group %in% c(1, 4), ])
 #'
 #' ## Show uncertainty using `se = TRUE`
 #' simplex_path_plot(data = plot_data[plot_data$.Group %in% c(1, 4), ],
-#'                   prop = c("p1", "p2", "p3", "p4"), se = TRUE)
+#'                   se = TRUE)
 #'
 #' ## Change colours of pie-glyphs using `pie_colours`
 #' simplex_path_plot(data = plot_data[plot_data$.Group %in% c(1, 4), ],
-#'                   prop = c("p1", "p2", "p3", "p4"), se = TRUE,
+#'                   se = TRUE,
 #'                   pie_colours = c("steelblue1", "steelblue4", "orange1", "orange4"))
 #'
 #' ## Show pie-glyphs at different points along the curve using `pie_positions`
 #' simplex_path_plot(data = plot_data[plot_data$.Group %in% c(1, 4), ],
-#'                   prop = c("p1", "p2", "p3", "p4"), se = TRUE,
+#'                   se = TRUE,
 #'                   pie_positions = c(0, 0.25, 0.5, 0.75, 1),
 #'                   pie_colours = c("steelblue1", "steelblue4", "orange1", "orange4"))
 #'
 #' ## Facet plot based on specific variables
 #' simplex_path_plot(data = plot_data,
-#'                   prop = c("p1", "p2", "p3", "p4"), se = TRUE,
+#'                   se = TRUE,
 #'                   facet_var = "block",
 #'                   pie_colours = c("steelblue1", "steelblue4", "orange1", "orange4"))
 #'
@@ -292,12 +292,12 @@ simplex_path_data <- function(starts, ends, prop,
 #'                        add_var = list("block" = c(1, 2)))
 #'
 #' simplex_path_plot(data = plot_data,
-#'                   prop = c("p1", "p2", "p3", "p4"),
 #'                   pie_colours = c("steelblue1", "steelblue4",
 #'                                   "orange1", "orange4"),
 #'                   nrow = 1, ncol = 2)
 simplex_path_plot <- function(data, prop = NULL,
                               pie_positions = c(0, 0.5, 1),
+                              pie_radius = 0.3,
                               pie_colours = NULL,
                               se = FALSE, facet_var = NULL,
                               nrow = 0, ncol = 0){
@@ -314,8 +314,8 @@ simplex_path_plot <- function(data, prop = NULL,
     prop <- attr(data, "prop")
 
     if(is.null(prop)){
-      cli::cli_abort(c("{.var prop} is empty and cannot be inferred from data.",
-                       "i" = "Specify either a character giving
+      cli::cli_abort(c("{.var prop} is {.pkg NULL} and cannot be inferred from data.",
+                       "i" = "Specify a character giving
                      names of the columns containing the
                      compositional variables in {.var data}."))
     }
@@ -324,20 +324,22 @@ simplex_path_plot <- function(data, prop = NULL,
   sanity_checks(data = data, prop = prop,
                 colours = pie_colours,
                 booleans = list("se" = se),
-                numerics = list("nrow" = nrow, "ncol" = ncol),
+                numerics = list("nrow" = nrow, "ncol" = ncol,
+                                "pie_radius" = pie_radius),
                 unit_lengths = list("nrow" = nrow, "ncol" = ncol))
 
   if(check_col_exists(data, ".add_str_ID")){
     ids <- unique(data$.add_str_ID)
     plots <- lapply(cli_progress_along(1:length(ids), name = "Creating plot",
                                        format = paste0(
-                                         "{pb_spin} Creating plot ",
-                                         "[{pb_current}/{pb_total}]   ETA:{pb_eta}"
+                                         "{cli::pb_spin} Creating plot ",
+                                         "[{cli::pb_current}/{cli::pb_total}]   ETA:{cli::pb_eta}"
                                        )),
                     function(i){
                       data_iter <- data %>% filter(.data$.add_str_ID == ids[i])
                       simplex_path_plot_internal(data = data_iter, prop = prop,
                                                  pie_positions = pie_positions,
+                                                 pie_radius = pie_radius,
                                                  pie_colours = pie_colours, se = se,
                                                  facet_var = facet_var)+
                         labs(subtitle = ids[i]) +
@@ -352,6 +354,7 @@ simplex_path_plot <- function(data, prop = NULL,
   } else {
     plot <- simplex_path_plot_internal(data = data, prop = prop,
                                        pie_positions = pie_positions,
+                                       pie_radius = pie_radius,
                                        pie_colours = pie_colours, se = se,
                                        facet_var = facet_var)
     cli::cli_alert_success("Created plot.")
@@ -457,7 +460,8 @@ simplex_path <- function(model, starts, ends, add_var = list(),
                          conf.level = 0.95,
                          se = FALSE,
                          pie_positions = c(0, 0.5, 1),
-                         pie_colours = NULL, FG = NULL,
+                         pie_colours = NULL,
+                         pie_radius = 0.3, FG = NULL,
                          facet_var = NULL, plot = TRUE,
                          nrow = 0, ncol = 0){
   # Sanity checks
@@ -483,11 +487,8 @@ simplex_path <- function(model, starts, ends, add_var = list(),
   original_data <- model$original_data
 
   # Get all species in the model
-  if(inherits(model, "DI")){
-    model_species <- eval(model$DIcall$prop)
-  } else if(inherits(model, "DImulti")){
-    model_species <- attr(model, "prop")
-  }
+  model_species <- attr(model, "prop")
+
   # If species were specified as column indices extract names
   if(is.numeric(model_species)){
     model_species <- colnames(original_data)[model_species]
@@ -506,7 +507,7 @@ simplex_path <- function(model, starts, ends, add_var = list(),
 
   # Get functional groups
   if(is.null(FG)){
-    FG <- eval(model$DIcall$FG)
+    FG <- attr(model, "FG")
   }
 
   # Colours for species
@@ -518,6 +519,7 @@ simplex_path <- function(model, starts, ends, add_var = list(),
     plot <- simplex_path_plot(data = plot_data, prop = model_species,
                               pie_positions = pie_positions,
                               pie_colours = pie_colours, se = se,
+                              pie_radius = pie_radius,
                               facet_var = facet_var,
                               nrow = 0, ncol = 0)
     return(plot)
@@ -534,6 +536,7 @@ simplex_path <- function(model, starts, ends, add_var = list(),
 #' @usage NULL
 NULL
 simplex_path_plot_internal <- function(data, prop, pie_colours = NULL,
+                                       pie_radius = 0.3,
                                        pie_positions = c(0, 0.5, 1),
                                        se = FALSE, facet_var = NULL){
 
@@ -562,7 +565,7 @@ simplex_path_plot_internal <- function(data, prop, pie_colours = NULL,
 
   # Create canvas for plot
   plot <- ggplot(data, aes(x = .data$.InterpConst, y = .data$.Pred))+
-    theme_bw()
+    theme_DI()
 
   # Add facet if specified
   if(!is.null(facet_var)){
@@ -604,7 +607,7 @@ simplex_path_plot_internal <- function(data, prop, pie_colours = NULL,
       ungroup()
   }
   plot <- plot +
-    geom_pie_glyph(data = pie_data, radius = 0.3,
+    geom_pie_glyph(data = pie_data, radius = pie_radius,
                    slices = prop, colour = 'black')+
     scale_fill_manual(values = pie_colours,
                       labels = prop)

@@ -15,6 +15,7 @@ simplex_path(
   se = FALSE,
   pie_positions = c(0, 0.5, 1),
   pie_colours = NULL,
+  pie_radius = 0.3,
   FG = NULL,
   facet_var = NULL,
   plot = TRUE,
@@ -75,6 +76,9 @@ of each curve.}
 in the pie-glyphs. \cr
 If left NULL, the colour blind friendly colours will be
 for the pie-glyph slices.}
+
+\item{pie_radius}{A numeric value specifying the radius (in cm) for the
+pie-glyphs. Default is 0.3 cm.}
 
 \item{FG}{A higher level grouping for the compositional variables in the
 data. Variables belonging to the same group will be assigned with

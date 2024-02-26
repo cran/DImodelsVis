@@ -219,6 +219,10 @@ prediction_contributions_data <- function(data, model = NULL, coefficients = NUL
   # Express the prediction into contribution from each coefficient in the model
   if (!is.null(attr(model, "DImodel")) && attr(model, "DImodel") == "FG"){
     nonFG_flag <- FALSE
+    # If model has theta then drop it from coefficients
+    if(!is.null(attr(model, "theta_flag")) && isTRUE(attr(model, "theta_flag"))){
+      coefficients <- coefficients[names(coefficients) != "theta"]
+    }
   } else {
     nonFG_flag <- TRUE
   }
@@ -372,8 +376,8 @@ prediction_contributions_plot <- function(data, colours = NULL, se = FALSE,
     ids <- unique(data$.add_str_ID)
     plots <- lapply(cli_progress_along(1:length(ids), name = "Creating plot",
                                        format = paste0(
-                                         "{pb_spin} Creating plot ",
-                                         "[{pb_current}/{pb_total}]   ETA:{pb_eta}"
+                                         "{cli::pb_spin} Creating plot ",
+                                         "[{cli::pb_current}/{cli::pb_total}]   ETA:{cli::pb_eta}"
                                        )),
                     function(i){
                       data_iter <- data %>% filter(.data$.add_str_ID == ids[i])
@@ -590,11 +594,8 @@ prediction_contributions <- function(model, data = NULL,
   original_data <- model$original_data
 
   # Get all species in the model
-  if(inherits(model, "DI")){
-    model_species <- eval(model$DIcall$prop)
-  } else if(inherits(model, "DImulti")){
-    model_species <- attr(model, "prop")
-  }
+  model_species <- attr(model, "prop")
+
   # If species were specified as column indices extract names
   if(is.numeric(model_species)){
     model_species <- colnames(original_data)[model_species]
@@ -626,7 +627,7 @@ prediction_contributions <- function(model, data = NULL,
 
   interval <- match.arg(interval)
   if(is.null(FG)){
-    FG <- eval(model$DIcall$FG)
+    FG <- attr(model, "FG")
   }
 
   # Prepare data for plotting
@@ -653,19 +654,19 @@ prediction_contributions <- function(model, data = NULL,
   if(length(groups) < 1){
     # Colours for species
     ## Colours for ID effects
-    mod_ids <- if (is.null(model$DIcall$ID)) model_species else eval(model$DIcall$ID)
+    mod_ids <- if (is.null(model$DIcall$ID)) model_species else attr(model, "ID")
     ID_cols <- get_colours(vars = mod_ids, FG = FG)
 
     ## Colours for interaction effects
     ## Number of interaction terms
-    DImodel_tag <- eval(model$DIcall$DImodel)
+    DImodel_tag <- attr(model, "DImodel")
     if (is.null(DImodel_tag)) {
       DImodel_tag <- "CUSTOM"
     }
 
     if(DImodel_tag == "FG"){
       n_ints <- ncol(DI_data_FG(prop = model_species, data = data,
-                                FG = eval(model$DIcall$FG))$FG)
+                                FG = attr(model, "FG"))$FG)
     } else {
       n_ints <- new - old
     }

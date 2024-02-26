@@ -260,7 +260,7 @@ conditional_ternary_data <- function(prop, FG = NULL,
         mutate(.Sp = paste0(cond_names, collapse = ", "),
                .Value = paste0(cond_vals, collapse = ", "),
                .Facet = paste0(cond_names, " = ", cond_vals,
-                               collapse = "; \t")) %>%
+                               collapse = "; ")) %>%
         mutate(.Facet = fct_inorder(.data$.Facet))
 
       # To avoid any rounding issues & ensure all species proportions sum to 1
@@ -411,18 +411,20 @@ conditional_ternary_plot <- function(data,
     ids <- unique(data$.add_str_ID)
     # If user didn't specify lower limit assume it to be min of predicted response
     if(is.null(lower_lim)){
-      lower_lim <- round(min(data[, ".Pred"]), 2)
+      # Ensure rounding includes all values in range
+      lower_lim <- round(min(data[, ".Pred"]), 2) - 0.01
     }
 
     # If user didn't specify upper limit assume it to be max of predicted response
     if(is.null(upper_lim)){
-      upper_lim <- round(max(data[, ".Pred"]), 2)
+      # Ensure rounding includes all values in range
+      upper_lim <- round(max(data[, ".Pred"]), 2) + 0.01
     }
 
     plots <- lapply(cli_progress_along(1:length(ids), name = "Creating plot",
                                        format = paste0(
-                                         "{pb_spin} Creating plot ",
-                                         "[{pb_current}/{pb_total}]   ETA:{pb_eta}"
+                                         "{cli::pb_spin} Creating plot ",
+                                         "[{cli::pb_current}/{cli::pb_total}]   ETA:{cli::pb_eta}"
                                        )),
                     function(i){
                       data_iter <- data %>% filter(.data$.add_str_ID == ids[i])
@@ -677,7 +679,7 @@ conditional_ternary_plot_internal <- function(data,
                             label = .data$x1*(1-x),
                             rev_label = rev(.data$label),
                             .Facet = paste0(cond_sp, " = ", cond_vals,
-                                            collapse = "; \t"),
+                                            collapse = "; "),
                             !! sym(col_var) := 0)
       }) %>% bind_rows()
 

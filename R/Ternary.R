@@ -284,20 +284,18 @@ ternary_data <- function(prop = c(".P1", ".P2", ".P3"),
 #'              col_var = "response", show = "points")
 #'
 #' ## Categorical variables can also be shown
+#' ## Also show axis guides using `show_axis_guides`
 #' sim0$richness <- as.factor(sim0$richness)
 #' ternary_plot(data = sim0, prop = c("p1", "p2", "p3"),
-#'              col_var = "richness", show = "points")
+#'              col_var = "richness", show = "points",
+#'              show_axis_guides = TRUE)
 #'
 #' ## Change colours by using `colours` argument
+#' ## and increase points size using `points_size`
 #' ternary_plot(data = sim0, prop = c("p1", "p2", "p3"),
 #'              col_var = "richness", show = "points",
-#'              colours = c("tomato", "steelblue", "orange"))
-#'
-#' ## Show axis guides and increase points size
-#' ternary_plot(data = sim0, prop = c("p1", "p2", "p3"),
-#'              show = "points", col_var = "richness",
-#'              show_axis_guides = TRUE, points_size = 4)
-#'
+#'              colours = c("tomato", "steelblue", "orange"),
+#'              points_size = 4)
 #'
 #' ### Show contours of response
 #' ## Fit model
@@ -316,20 +314,17 @@ ternary_data <- function(prop = c(".P1", ".P2", ".P3"),
 #' cols <- hcl.colors(7) # because there are 7 contour levels by default
 #' ternary_plot(plot_data, colours = cols)
 #'
-#' ## Change number of contours and set custom upper and lower
-#' ## limits for the scale
+#' \donttest{
+#' ## Change number of contours using `nlevels`
+#' ## and set custom upper and lower limits for the scale
 #' ternary_plot(plot_data, nlevels = 10, colours = hcl.colors(10),
 #'              lower_lim = 10, upper_lim = 35)
-#'
-#' ## Add axis guides
-#' ternary_plot(plot_data, show_axis_guides = TRUE)
 #'
 #' ## Change ternary labels along with their font-size
 #' ternary_plot(plot_data, tern_labels = c("Sp1", "Sp2", "Sp3"),
 #'              vertex_label_size = 6, axis_label_size = 5)
 #'
 #' ## Add additional variables and create a separate plot for each
-#' \donttest{
 #' sim0$treatment <-  rep(c("A", "B", "C", "D"), each = 16)
 #' new_mod <- update(mod, ~. + treatment, data = sim0)
 #' tern_data <- ternary_data(resolution = 1, model = new_mod,
@@ -391,19 +386,21 @@ ternary_plot <- function(data, prop = NULL,
 
       # If user didn't specify lower limit assume it to be min of predicted response
       if(is.null(lower_lim)){
-        lower_lim <- round(min(data[, col_var]), 2)
+        # Ensure rounding includes all values in range
+        lower_lim <- round(min(data[, col_var]), 2) - 0.01
       }
 
       # If user didn't specify upper limit assume it to be max of predicted response
       if(is.null(upper_lim)){
-        upper_lim <- round(max(data[, col_var]), 2)
+        # Ensure rounding includes all values in range
+        upper_lim <- round(max(data[, col_var]), 2) + 0.01
       }
     }
 
     plots <- lapply(cli_progress_along(1:length(ids), name = "Creating plot",
                                        format = paste0(
-                                         "{pb_spin} Creating plot ",
-                                         "[{pb_current}/{pb_total}]   ETA:{pb_eta}"
+                                         "{cli::pb_spin} Creating plot ",
+                                         "[{cli::pb_current}/{cli::pb_total}]   ETA:{cli::pb_eta}"
                                        )),
                     function(i){
                       data_iter <- data %>% filter(.data$.add_str_ID == ids[i])
@@ -531,12 +528,12 @@ ternary_plot_internal <- function(data, prop,
 
       # If user didn't specify lower limit assume it to be min of predicted response
       if(is.null(lower_lim)){
-        lower_lim <- round(min(data[, col_var]), 2)
+        lower_lim <- round(min(data[, col_var]), 2) - 0.01
       }
 
       # If user didn't specify upper limit assume it to be max of predicted response
       if(is.null(upper_lim)){
-        upper_lim <- round(max(data[, col_var]), 2)
+        upper_lim <- round(max(data[, col_var]), 2) + 0.01
       }
     } else {
       # Calculate x-y projection if it's not present in data

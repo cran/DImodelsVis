@@ -43,12 +43,8 @@ space is compositional in nature.
 
 \subsection{\strong{Package Map:}}{
 
-\if{html}{
-  \figure{DImodelsVis_workflow_package.png}{options: style="width:750px;max-width:75\%;"}
-}
-\if{latex}{
-  \out{\begin{center}}\figure{DImodelsVis_workflow_package.png}\out{\end{center}}
-}
+\if{html}{\figure{DImodelsVisWorkflowPackage.png}{options: style="width:750px;max-width:75\%;"}}
+\if{latex}{\figure{DImodelsVisWorkflowPackage.png}{options: width=7cm}}
 
 The functions in the package can be categorised as functions for visualising
 model selection and validation or functions to aid with model interpretation.

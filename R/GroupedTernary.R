@@ -228,7 +228,7 @@ grouped_ternary_data <- function(prop, FG,
         mutate(.Sp = paste0(cond_names, collapse = ", "),
                .Value = paste0(cond_vals, collapse = ", "),
                .Facet = paste0(cond_names, " = ", cond_vals,
-                               collapse = "; \t"))
+                               collapse = "; "))
 
       # To avoid any rounding issues & ensure all species proportions sum to 1
       # No need to fix if rowsum is one
@@ -519,20 +519,11 @@ grouped_ternary <- function(model,
   og_data <- model$original_data
 
   # Get all species in the model
-  if(inherits(model, "DI")){
-    species <- eval(model$DIcall$prop)
-  } else if(inherits(model, "DImulti")){
-    species <- attr(model, "prop")
-  }
-  if(is.numeric(species)){
-    species <- colnames(og_data)[species]
-  }
+  species <- attr(model, "prop")
 
   # Ensure FG is specified
   if(missing(FG)){
-    if(!is.null(eval(model$DIcall$FG))){
-      FG <- eval(model$DIcall$FG)
-    } else if (!is.null(attr(model, "FG"))){
+    if (!is.null(attr(model, "FG"))){
       FG <- attr(model, "FG")
     } else {
       cli::cli_abort(c("The {.var FG} argument cannot be empty.",
@@ -635,6 +626,15 @@ FG_sanity_checks <- function(prop, FG,
                      in {.var prop} belongs.",
                      "i" = "{.var FG} has length {length(FG)} while {.var prop}
                      has length {length(prop)}."))
+  }
+
+  if(any(prop %in% FG)){
+    cli::cli_abort(c("The names specified for grouping in the {.var FG}
+                    argument should be different than those specified in
+                    the {.var prop} argument.",
+                     "i" = "The group{?s} {.val {unique(FG)[unique(FG) %in% prop]}}
+                     from {.var FG} {?is/are} present in {.var prop}.
+                     Please change their names in {.var FG}."))
   }
 
   if(is.null(values)){
@@ -754,46 +754,6 @@ FG_sanity_checks <- function(prop, FG,
                                                FG_flag = TRUE)
   }
 
-  # # Check for conditional FG and conditioning values
-  # if(length(all_FGs) > 3){
-  #   if(!is.null(cond_FG)){
-  #
-  #     if(!is.character(cond_FG)){
-  #       cli::cli_abort(c("{.var cond_FG} should be a character vector specifying the functional group to condition the ternary diagram when there are more than 3 groups in the model.",
-  #                        "i" = "{.var cond_FG} was specified as a {.cls {cond_FG}} object."))
-  #     }
-  #
-  #     if(!all(cond_FG %in% all_FGs)){
-  #       cli::cli_abort(c("The value specified in {.var cond_FG} was not found in {.var FG}.",
-  #                        "i" = "{.var cond_FG} has value {.val {cond_FG}} while {.var FG} has values {.val {all_FGs}}."))
-  #     }
-  #   } else {
-  #     cli::cli_warn(c("More than three functional groups in model and no function group specified to condition on.",
-  #                     "i" = "Choosing {.val {all_FGs[1:3]}} to show in ternary and conditioning on {.val {all_FGs[4:length(all_FGs)]}}"))
-  #     cond_FG <- all_FGs[4:length(all_FGs)]
-  #   }
-  #
-  #   if(!is.null(cond_values)){
-  #     if(!all(is.numeric(cond_values))){
-  #       cli::cli_abort(c("{.var cond_values} should be a numeric vector with values between 0 and 1 describing the values at which to condition the n-dimensional simplex space.",
-  #                        "i" = "{.var cond_values} was specified as a {.cls {cond_values}} object."))
-  #     }
-  #
-  #     if(!all(between(cond_values, 0, 1))){
-  #       cli::cli_abort(c("{.var cond_values} should be a numeric vector with values between 0 and 1 describing the values at which to condition the n-dimensional simplex space.",
-  #                        "i" = "The value{?s} specified in {.var cond_values} {?was/were} {.val {as.character(cond_values)}}."))
-  #     }
-  #   } else {
-  #     cli::cli_warn(c("Choosing default values of 0.2, 0.5 and 0.8 for conditioning the n-dimensional simplex space."))
-  #     cond_values <- c(0.2, 0.5, 0.8)
-  #   }
-  # }
-  #
-  # tern_vars <- setdiff(unique(FG), cond_FG)
-  # if(length(tern_vars) > 3){
-  #   cli::cli_warn(c("After accounting for the values specified in {.var cond_FG}, there are more than three functional groups to show on the ternary diagram.",
-  #                   "i" = "Creating the diagram for functional groups `{tern_vars[1]}`, `{tern_vars[2]}`, and `{tern_vars[3]}` and assuming all of {.var {tern_vars[4:length(tern_vars)]}} to be 0, but it might not be very informative."))
-  # }
   return(list("values" = values, "all_FGs" = all_FGs, "tern_vars" = tern_vars,
               "conditional" = conditional))
 }

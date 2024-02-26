@@ -56,8 +56,8 @@ sanity_checks <- function(data = NULL, prop = NULL, responses = NULL,
   if(!is.null(prop)){
     # Ensure prop is numeric or character
     if(!all(is.character(prop)) & !all(is.numeric(prop))){
-      cli::cli_abort(c("{.var prop} should be a numeric or character vector specifying
-                       the column indices or names of columns containing the compositonal
+      cli::cli_abort(c("{.var prop} should be a character vector specifying
+                       the column names of the columns containing the compositonal
                        variables.",
                        "x" = "You specified an object of class {.cls {class(prop)}}"),
                      call = call)
@@ -279,7 +279,7 @@ sanity_checks <- function(data = NULL, prop = NULL, responses = NULL,
     if(!all(sapply(numerics, is.numeric))){
       cli::cli_abort(c("x" = "The value{?s} specified in
                        {.var {names(numerics)[!sapply(numerics, is.numeric)]}}
-                       {?is/are} not {?a/} numeric."),
+                       {?is/are} not numeric."),
                      call = call)
     }
   }

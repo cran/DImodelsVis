@@ -9,6 +9,7 @@ simplex_path_plot(
   data,
   prop = NULL,
   pie_positions = c(0, 0.5, 1),
+  pie_radius = 0.3,
   pie_colours = NULL,
   se = FALSE,
   facet_var = NULL,
@@ -30,6 +31,9 @@ indicating the positions along the X-axis at which to
 show pie-glyphs for each curve. Default is c(0, 0.5, 1) meaning
 that pie-glyphs with be shown at the start, midpoint and end
 of each curve.}
+
+\item{pie_radius}{A numeric value specifying the radius (in cm) for the
+pie-glyphs. Default is 0.3 cm.}
 
 \item{pie_colours}{A character vector indicating the colours for the slices
 in the pie-glyphs. \cr
@@ -76,30 +80,30 @@ plot_data <- simplex_path_data(starts = sim2[c(19, 20, 19, 20), ],
                                ends = sim2[c(47, 52, 55, 60), ],
                                prop = c("p1", "p2", "p3", "p4"),
                                model = mod)
-simplex_path_plot(data = plot_data, prop = c("p1", "p2", "p3", "p4"))
+## prop will be inferred from data
+simplex_path_plot(data = plot_data)
 
 ## Show specific curves
-simplex_path_plot(data = plot_data[plot_data$.Group \%in\% c(1, 4), ],
-                  prop = c("p1", "p2", "p3", "p4"))
+simplex_path_plot(data = plot_data[plot_data$.Group \%in\% c(1, 4), ])
 
 ## Show uncertainty using `se = TRUE`
 simplex_path_plot(data = plot_data[plot_data$.Group \%in\% c(1, 4), ],
-                  prop = c("p1", "p2", "p3", "p4"), se = TRUE)
+                  se = TRUE)
 
 ## Change colours of pie-glyphs using `pie_colours`
 simplex_path_plot(data = plot_data[plot_data$.Group \%in\% c(1, 4), ],
-                  prop = c("p1", "p2", "p3", "p4"), se = TRUE,
+                  se = TRUE,
                   pie_colours = c("steelblue1", "steelblue4", "orange1", "orange4"))
 
 ## Show pie-glyphs at different points along the curve using `pie_positions`
 simplex_path_plot(data = plot_data[plot_data$.Group \%in\% c(1, 4), ],
-                  prop = c("p1", "p2", "p3", "p4"), se = TRUE,
+                  se = TRUE,
                   pie_positions = c(0, 0.25, 0.5, 0.75, 1),
                   pie_colours = c("steelblue1", "steelblue4", "orange1", "orange4"))
 
 ## Facet plot based on specific variables
 simplex_path_plot(data = plot_data,
-                  prop = c("p1", "p2", "p3", "p4"), se = TRUE,
+                  se = TRUE,
                   facet_var = "block",
                   pie_colours = c("steelblue1", "steelblue4", "orange1", "orange4"))
 
@@ -113,7 +117,6 @@ plot_data <- simplex_path_data(starts = sim2[c(18), 3:6],
                        add_var = list("block" = c(1, 2)))
 
 simplex_path_plot(data = plot_data,
-                  prop = c("p1", "p2", "p3", "p4"),
                   pie_colours = c("steelblue1", "steelblue4",
                                   "orange1", "orange4"),
                   nrow = 1, ncol = 2)

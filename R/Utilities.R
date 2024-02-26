@@ -1668,6 +1668,7 @@ link_DImodelsMulti <- function(model, add_var = list()){
   time_flag <- attr(model, "Timeflag")
   if(isTRUE(time_flag)){
     time_col <- attr(model, "time")
+    # If variable is not specified in add_var then add it
     if(is.null(add_var[[time_col]])){
       time_vals <- unique(model_data[, time_col])
       add_var[[time_col]] <- time_vals
@@ -1678,6 +1679,7 @@ link_DImodelsMulti <- function(model, add_var = list()){
   MV_flag <- attr(model, "MVflag")
   if(isTRUE(MV_flag)){
     MV_col <- attr(model, "Yfunc")
+    # If variable is not specified in add_var then add it
     if(is.null(add_var[[MV_col]])){
       MV_vals <- unique(model_data[, MV_col])
       add_var[[MV_col]] <- MV_vals
@@ -1694,17 +1696,14 @@ NULL
 predict_from_DImulti <- function(model, newdata = model$original_data, ...){
   # Get ID_col
   ID_col <- attr(model, "unitIDs")
-  if(isFALSE(check_col_exists(newdata, ID_col))){
-    if(isTRUE(check_col_exists(newdata, ".add_str_ID"))){
-      reps <- length(unique(newdata$.add_str_ID))
-      idx <- 1:(nrow(newdata)/reps)
-      # newdata <- newdata %>% mutate(!!sym(ID_col) := rep(idx, times = reps))
-    }
+  if(check_col_exists(newdata, ID_col)){
+    newdata <- newdata %>% select(-ID_col)
   }
   preds <- suppressWarnings(predict(object = model, newdata = newdata,
                                     stacked = F, ...))
   preds <- preds %>% mutate(across(everything(), function(x) ifelse(is.nan(x), 0, x)))
-  return(rowSums(preds[, -1]))
+  preds <- rowSums(preds[, -1])
+  return(preds)
 }
 
 #' @keywords internal

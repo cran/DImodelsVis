@@ -15,6 +15,7 @@ visualise_effects(
   se = FALSE,
   average = TRUE,
   pie_colours = NULL,
+  pie_radius = 0.3,
   FG = NULL,
   plot = TRUE,
   nrow = 0,
@@ -68,6 +69,9 @@ median value of any variables not specified.}
 in the pie-glyphs. \cr
 If left NULL, the colour blind friendly colours will be
 for the pie-glyph slices.}
+
+\item{pie_radius}{A numeric value specifying the radius (in cm) for the
+pie-glyphs. Default is 0.3 cm.}
 
 \item{FG}{A higher level grouping for the compositional variables in the
 data. Variables belonging to the same group will be assigned with

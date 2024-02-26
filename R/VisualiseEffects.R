@@ -355,7 +355,9 @@ visualise_effects_data <- function(data, prop, var_interest = NULL,
   }
 
   # Add flag to identify whether we are looking a effect of increase or effect of decrease
-  plot_data$.Effect <- effect
+  plot_data <- plot_data %>%
+    mutate(.Effect = effect,
+           .Sp = fct_inorder(.data$.Sp))
 
   # Add attribute to identify prop cols
   attr(plot_data, "prop") <- prop
@@ -388,6 +390,8 @@ visualise_effects_data <- function(data, prop, var_interest = NULL,
 #'                    in the pie-glyphs. \cr
 #'                    If left NULL, the colour blind friendly colours will be
 #'                    for the pie-glyph slices.
+#' @param pie_radius A numeric value specifying the radius (in cm) for the
+#'                   pie-glyphs. Default is 0.3 cm.
 #' @param se A boolean variable indicating whether to plot confidence intervals associated with
 #'           the effect of species increase or decrease
 #' @param average A boolean value indicating whether to add a line describing the "average"
@@ -416,19 +420,18 @@ visualise_effects_data <- function(data, prop, var_interest = NULL,
 #'                                     effect = "increase", model = mod)
 #'
 #' ## Create plot
-#' visualise_effects_plot(data = plot_data,
-#'                        prop = c("p1", "p2", "p3", "p4"))
+#' visualise_effects_plot(data = plot_data)
 #'
 #' ## Show specific curves with prediction intervals
 #' subset <- custom_filter(plot_data, .Group %in% c(7, 15))
 #' visualise_effects_plot(data = subset, prop = 1:4, se = TRUE)
 #'
 #' ## Do not show average effect line
-#' visualise_effects_plot(data = subset, prop = 1:4,
+#' visualise_effects_plot(data = subset,
 #'                        se = TRUE, average = FALSE)
 #'
 #' ## Change colours of the pie-glyph slices
-#' visualise_effects_plot(data = subset, prop = 1:4,
+#' visualise_effects_plot(data = subset,
 #'                        pie_colours = c("darkolivegreen", "darkolivegreen1",
 #'                                    "steelblue4", "steelblue1"))
 #'
@@ -442,11 +445,11 @@ visualise_effects_data <- function(data, prop, var_interest = NULL,
 #'                                     add_var = list("block" = c(1, 2)))
 #'
 #' visualise_effects_plot(data = plot_data,
-#'                        prop = c("p1", "p2", "p3", "p4"),
 #'                        average = FALSE,
 #'                        pie_colours = c("darkolivegreen", "darkolivegreen1",
-#'                                    "steelblue4", "steelblue1"))
+#'                                        "steelblue4", "steelblue1"))
 visualise_effects_plot <- function(data, prop, pie_colours = NULL,
+                                   pie_radius = 0.3,
                                    se = FALSE, average = TRUE,
                                    nrow = 0, ncol = 0){
   if(missing(data)){
@@ -461,7 +464,7 @@ visualise_effects_plot <- function(data, prop, pie_colours = NULL,
     prop <- attr(data, "prop")
 
     if(is.null(prop)){
-      cli::cli_abort(c("{.var prop} is empty and cannot be inferred from data.",
+      cli::cli_abort(c("{.var prop} is {.pkg NULL} and cannot be inferred from data.",
                        "i" = "Specify a character vector giving
                      names of the columns containing the
                      compositional variables in {.var data}."))
@@ -472,19 +475,23 @@ visualise_effects_plot <- function(data, prop, pie_colours = NULL,
                 colours = pie_colours,
                 booleans = list("se" = se, "average" = average),
                 numerics = list("nrow" = nrow, "ncol" = ncol),
-                unit_lengths = list("nrow" = nrow, "ncol" = ncol))
+                unit_lengths = list("nrow" = nrow, "ncol" = ncol,
+                                    "pie_radius" = pie_radius))
 
   if(check_col_exists(data, ".add_str_ID")){
     ids <- unique(data$.add_str_ID)
     plots <- lapply(cli_progress_along(1:length(ids), name = "Creating plot",
                                        format = paste0(
-                                         "{pb_spin} Creating plot ",
-                                         "[{pb_current}/{pb_total}]   ETA:{pb_eta}"
+                                         "{cli::pb_spin} Creating plot ",
+                                         "[{cli::pb_current}/{cli::pb_total}]   ETA:{cli::pb_eta}"
                                        )),
                     function(i){
                       data_iter <- data %>% filter(.data$.add_str_ID == ids[i])
-                      visualise_effects_plot_internal(data = data_iter, prop = prop,
-                                                      pie_colours = pie_colours, se = se,
+                      visualise_effects_plot_internal(data = data_iter,
+                                                      prop = prop,
+                                                      pie_radius = pie_radius,
+                                                      pie_colours = pie_colours,
+                                                      se = se,
                                                       average = average)+
                         labs(subtitle = ids[i]) +
                         ylim(min(data$.Pred), max(data$.Pred))
@@ -497,7 +504,9 @@ visualise_effects_plot <- function(data, prop, pie_colours = NULL,
     cli::cli_alert_success("Created all plots.")
   } else {
     plot <- visualise_effects_plot_internal(data = data, prop = prop,
-                                            pie_colours = pie_colours, se = se,
+                                            pie_radius = pie_radius,
+                                            pie_colours = pie_colours,
+                                            se = se,
                                             average = average)
     cli::cli_alert_success("Created plot.")
   }
@@ -633,7 +642,9 @@ visualise_effects <- function(model, data = NULL, var_interest = NULL,
                               interval = c("confidence", "prediction", "none"),
                               conf.level = 0.95,
                               se = FALSE, average = TRUE,
-                              pie_colours = NULL, FG = NULL, plot = TRUE,
+                              pie_colours = NULL,
+                              pie_radius = 0.3,
+                              FG = NULL, plot = TRUE,
                               nrow = 0, ncol = 0){
 
   # Sanity checks
@@ -647,11 +658,8 @@ visualise_effects <- function(model, data = NULL, var_interest = NULL,
   original_data <- model$original_data
 
   # Get all species in the model
-  if(inherits(model, "DI")){
-    model_species <- eval(model$DIcall$prop)
-  } else if(inherits(model, "DImulti")){
-    model_species <- attr(model, "prop")
-  }
+  model_species <- attr(model, "prop")
+
   # If species were specified as column indices extract names
   if(is.numeric(model_species)){
     model_species <- colnames(original_data)[model_species]
@@ -721,11 +729,7 @@ visualise_effects <- function(model, data = NULL, var_interest = NULL,
 
   # Get functional groups
   if(is.null(FG)){
-    if(inherits(model, "DI")){
-      FG <- eval(model$DIcall$FG)
-    } else {
       FG <- attr(model, "FG")
-    }
   }
 
   # Colours for species
@@ -737,6 +741,7 @@ visualise_effects <- function(model, data = NULL, var_interest = NULL,
     plot <- visualise_effects_plot(data = plot_data,
                                    prop = model_species,
                                    pie_colours = pie_colours,
+                                   pie_radius = pie_radius,
                                    se = se,
                                    average = average)
     return(plot)
@@ -751,6 +756,7 @@ visualise_effects <- function(model, data = NULL, var_interest = NULL,
 #' @usage NULL
 NULL
 visualise_effects_plot_internal <- function(data, prop, pie_colours = NULL,
+                                            pie_radius = 0.3,
                                             se = FALSE, average = TRUE){
 
   # Check all columns necessary for plotting are present
@@ -786,7 +792,7 @@ visualise_effects_plot_internal <- function(data, prop, pie_colours = NULL,
 
   # Create canvas for plot
   plot <- ggplot(data, aes(x = .data$.Proportion, y= .data$.Pred))+
-    theme_bw()
+    theme_DI()
 
   # Add ribbons for uncertainty of prediction
   if(se){
@@ -826,7 +832,7 @@ visualise_effects_plot_internal <- function(data, prop, pie_colours = NULL,
 
   # Add the pie-chart glyphs for identifying the data
   plot <- plot +
-    geom_pie_glyph(aes(group = .data$.Sp), data = pie_data, radius = 0.3,
+    geom_pie_glyph(aes(group = .data$.Sp), data = pie_data, radius = pie_radius,
                    slices = prop, colour = 'black')+
     scale_fill_manual(values = pie_colours,
                       labels = prop)
