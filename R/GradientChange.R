@@ -533,11 +533,6 @@ gradient_change <- function(model, data = NULL,
   # Get all species in the model
   model_species <- attr(model, "prop")
 
-  # If species were specified as column indices extract names
-  if(is.numeric(model_species)){
-    model_species <- colnames(original_data)[model_species]
-  }
-
   # If data is not specified then create data
   if(is.null(data)){
     data <- original_data
@@ -687,12 +682,6 @@ gradient_change_plot_internal <- function(data, prop = NULL,
 
   # Create plot
   plot <- ggplot(data = data, aes(x = !! sym(gradient_var), y = !! sym(y_var)))+
-    geom_point(aes(group = .data$.Evenness),
-               fill = '#555555',
-               colour = "#000000",
-               pch = 21, stroke = 1,
-               size = points_size,
-               position = position)+
     labs(x = xlab,
          y = ifelse(y_var == ".Pred", "Predicted Response", y_var),
          fill = "Variables")+
@@ -705,7 +694,7 @@ gradient_change_plot_internal <- function(data, prop = NULL,
   }
 
 
-  if(average){
+  if(isTRUE(average)){
     if(check_col_exists(data, ".Avg") && is.null(facet_var)){
       plot <- plot +
         geom_line(aes(y = .data$.Avg),
@@ -726,6 +715,15 @@ gradient_change_plot_internal <- function(data, prop = NULL,
                   linewidth = 1, linetype = 2)
     }
   }
+
+  # Add points
+  plot <- plot +
+    geom_point(aes(group = .data$.Evenness),
+               fill = '#555555',
+               colour = "#000000",
+               pch = 21, stroke = 1,
+               size = points_size,
+               position = position)
 
   # If pie_data is specified then ensure colours are appropriate
   if(!is.null(pie_data)){

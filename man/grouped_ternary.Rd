@@ -17,7 +17,7 @@ grouped_ternary(
   colours = NULL,
   lower_lim = NULL,
   upper_lim = NULL,
-  contour_text = TRUE,
+  contour_text = FALSE,
   show_axis_labels = TRUE,
   show_axis_guides = FALSE,
   axis_label_size = 4,
@@ -87,7 +87,7 @@ colour scale for categorical variables.}
 
 \item{contour_text}{A boolean value indicating whether to include labels on
 the contour lines showing their values
-(if `show = "contours"`). The default is \code{TRUE}.}
+(if `show = "contours"`). The default is \code{FALSE}.}
 
 \item{show_axis_labels}{A boolean value indicating whether to show axis
 labels along the edges of the ternary. The default

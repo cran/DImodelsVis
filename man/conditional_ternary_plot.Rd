@@ -12,7 +12,7 @@ conditional_ternary_plot(
   lower_lim = NULL,
   upper_lim = NULL,
   tern_labels = colnames(data)[1:3],
-  contour_text = TRUE,
+  contour_text = FALSE,
   show_axis_labels = TRUE,
   show_axis_guides = FALSE,
   points_size = 2,
@@ -54,7 +54,7 @@ the right vertex of the ternary.}
 
 \item{contour_text}{A boolean value indicating whether to include labels on
 the contour lines showing their values
-(if `show = "contours"`). The default is \code{TRUE}.}
+(if `show = "contours"`). The default is \code{FALSE}.}
 
 \item{show_axis_labels}{A boolean value indicating whether to show axis
 labels along the edges of the ternary. The default

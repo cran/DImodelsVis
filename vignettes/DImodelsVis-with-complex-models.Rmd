@@ -16,158 +16,678 @@ knitr::opts_chunk$set(
   fig.aling = "center",
   warning = FALSE
 )
+
+library(knitr)
+
+# Hook to automatically detect the function used in the chunk and set alt text
+knit_hooks$set(plot = function(x, options) {
+  if (is.null(options$fig.alt)) {
+     # Combine the chunk code
+    code <- paste(options$code, collapse = "\n")
+    
+    # List of known functions
+    funs <- c("conditional_ternary_plot", "grouped_ternary_plot", "visualise_effects_plot", "simplex_path_plot", "gradient_change_plot", "prediction_contributions_plot", "model_diagnostics", "model_selection_plot")
+    pattern <- paste(funs, collapse = "|")
+    
+    # Extract first matching function
+    matches <- regmatches(code, gregexpr(pattern, code))[[1]]
+    if (length(matches) > 0) {
+      options$fig.alt <- paste0("Output from ", matches[1], "() function")
+    } else {
+      options$fig.alt <- "Plot output"
+    }
+  }
+  knitr::hook_plot_md(x, options)
+  hook_plot_md(x, options)
+})
+
 ```
 
-The `DImodelsVis` is very convenient to use with regression models fit using the [`DImodels`](https://cran.r-project.org/package=DImodels) R package. However, sometimes users could have more complicated models which couldn't be fit using [`DImodels`](https://cran.r-project.org/package=DImodels) or they would prefer to have more flexibility and control in customising the plot or the underlying data. 
+```{css, echo = FALSE}
 
-For these situations, each plotting function has a corresponding data preparation and plotting function. The data preparation functions have an _data suffix while the plotting functions have an _plot suffix. This document describes how to use the data preparation functions to construct (and customise) the underlying data, which can then be passed to the plotting function for visualising the results. 
+/* Highlight box */
+.highlightbox {
+  background-color: #e6f0fa;   /* light blue */
+  border: 2px solid #156082;   /* darker blue */
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin: 12px 0;
+  box-shadow: 2px 2px 6px rgba(0,0,0,0.1);
+}
+
+
+/* Note box */
+.notebox {
+  background-color: #f7f7f7;   /* light gray */
+  border: 1px solid #999999;   /* medium gray */
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin: 10px 0;
+  box-shadow: 1px 1px 4px rgba(0,0,0,0.08);
+}
+
+```
+
+
+`DImodelsVis` is very convenient to use with regression models fit using the [`DImodels`](https://cran.r-project.org/package=DImodels) or 
+[`DImodelsMulti`](https://cran.r-project.org/package=DImodelsMulti) R packages. However, there may be situations when users need to work with highly customised and complex models that are not possible to fit using either `DImodels` or `DImodelsMulti`. Additionally, users may also desire finer control over the visualisation pipeline and seek to modify both, the plot appearance as well as the underlying data. To accommodate these needs, each visualisation function in `DImodelsVis` is paired with a separate data preparation (suffixed by `_data`) and plotting (suffixed by `_plot`) function. This separation provides great flexibility, as the data preparation functions allow users to create, modify, or extend the prepared data before visualising it, while the plotting functions enable customisation of the plot aesthetics independently. This document provides examples demonstrating how users can leverage this separation to create visualisations in a modular manner and derive insights from any regression model with compositional predictors using `DImodelsVis`. The examples shown here are created with a regression model fit using `glm` but the exact same principles would apply for creating visualisations using any other regression modelling tool kit.
 
 ### Load libraries
-```{r setup, message=FALSE, warning=FALSE}
-library(DImodelsVis)
-library(DImodels)
-library(dplyr)
+
+The following libraries will be used for data processing and generating visualisations.
+
+```{r, libraries, message=FALSE, warning=FALSE}
+library(DImodels)     # For loading the dataset
+library(DImodelsVis)  # For creating visualisations
+library(dplyr)        # For data manipulation
+library(ggplot2)      # For modifying visualisations
+library(PieGlyph)     # Adding Pie-glyphs on figures
+```
+
+```{r, theme-set, echo=FALSE}
+theme_set(theme_DI(font_size = 10))
 ```
 
 ### Load data
-We use the `sim4` data from the [`DImodels`](https://cran.r-project.org/package=DImodels) R package. This is a simulated dataset to represent typical data arising from a grassland experiment. We have several communities with one up to six species (`p1`-`p6`) sown at varying proportions. There is a `treatment` covariate representing the fertilisation level (in kg/ha/yr) applied in each community. Further, it is assumed that the species can be grouped based on the function they perform in the community, thus `p1` and `p2` are assumed to be grasses, with `p3` and `p4` being legumes, and `p5` and `p6` being herbs. The `response` variable is assumed to be annual aboveground dry-matter yield.
-```{r load-data}
+
+We use the `sim4` data (henceforth referred as `sim4`) from the [`DImodels`](https://cran.r-project.org/package=DImodels) R package. The `sim4` data is simulated to represent patterns commonly observed in BEF studies. The proportions of six species (labelled p1 to p6) were manipulated to create 33 communities, each containing one to six species. Additionally, a treatment covariate representing three nitrogen fertilisation levels (`50`, `150`, and `250`) in kg/ha/yr was also added with every community replicated at each treatment level. The species are categorised into functional groups based on their ecological roles: `p1` and `p2` are classified as grasses, `p3` and `p4` as legumes, and `p5` and `p6` as herbs. The response variable of interest is the annual aboveground dry-matter yield (in tonnes/ha). The first few rows of the data are printed below.
+
+
+```{r, raw_data}
 data("sim4")
-head(sim4)
+head(sim4, 8)
+```
+
+### Model fitting
+
+We relabel the species columns in the data such that the two grasses are `G1` and `G2`, legumes are `L1` and `L2`, with herbs being `H1` and `H2`. Furthermore we also add the within and between functional group interaction terms to our data.
+
+```{r}
+model_data <- sim4 %>% 
+  # Rename species columns
+  rename(G1 = p1, G2 = p2, L1 = p3, 
+         L2 = p4, H1 = p5, H2 = p6) %>% 
+  # Total functional group proportion
+  mutate(G = G1 + G2,
+         L = L1 + L2,
+         H = H1 + H2) %>% 
+  # Add additional interaction columns to data
+  mutate(wfg_G = G1*G2, wfg_L = L1*L2, wfg_H = H1*H2,
+         bfg_GL = (G1 + G2) * (L1 + L2),
+         bfg_GH = (G1 + G2) * (H1 + H2),
+         bfg_LH = (L1 + L2) * (H1 + H2)) %>% 
+  # Add dummy variables for treatment
+  mutate(treatment50 = ifelse(treatment == 50, 1, 0),
+         treatment150 = ifelse(treatment == 150, 1, 0),
+         treatment250 = ifelse(treatment == 250, 1, 0)) %>% 
+  # Rearrange columns
+  select(-response, everything(), response)
+
+
+head(model_data, 8)
 ```
 
 ### Fitting the model
-We take a subset of the data with communities receiving 50 and 150 kg fertiliser and fit an `lm` model to this data where we model the response as a linear combination of the species proportions, the average interaction term (AV; see `?DI_data_E_AV` for more interaction) and the fertiliser treatment. We also add an interaction between the average interaction term and fertiliser treatment, assuming that the amount of fertiliser in a plot affects the way species interact. 
 
-```{r fit-model}
-species <- c("p1", "p2", "p3", "p4", "p5", "p6")
-FG <- c("Gr", "Gr", "Le", "Le", "He", "He")
+A regression model is fit to `model_data` using the `glm()` function with the model equation as shown below:
 
-model_data <- sim4 %>% 
-  mutate(AV = DI_data_E_AV(prop = species, data = .)$AV,
-         treatment = as.factor(treatment))
+$$
+\begin{align} 
+y &= \beta_{G1} p_{G1} + \beta_{G2} p_{G2} + \beta_{L1} p_{L1} + \beta_{L2} p_{L2} + \beta_{H1} p_{H1} + \beta_{H2} p_{H2} + \nonumber \\ &\quad \quad \omega_{GL} p_{G} p_{L} + \omega_{GH} p_{G} p_{H} + \omega_{LH} p_{L} p_{H} + \nonumber \\ & \quad \quad \omega_{G} p_{G1} p_{G2} + \omega_{L} p_{L1} p_{L2} + \omega_{H} p_{H1} p_{H2} + \nonumber \\ & \quad \quad \alpha_{150} A_{150} + \alpha_{250} A_{250} + \epsilon
+\end{align}
+$$
 
-mod <- lm(response ~  0 + p1 + p2 + p3 + p4 + p5 + p6 + (AV):treatment,
-           data = model_data)
+where $y$ is the response (annual biomass yield), $p_{G1}$, $p_{G2}$, $p_{L1}$, $p_{L2}$ $p_{H1}$, and $p_{H2}$ are the sown proportions and $\beta_{G1}$, $\beta_{G2}$, $\beta_{L1}$, $\beta_{L2}$, $\beta_{H1}$, and $\beta_{H2}$ are the identity effects of the six species G1, G2, L1, L2, H1, and H2 respectively.The functional group proportions of grasses, legumes, and herbs is represented by $p_{G}$ ($p_{G} = p_{G1} + p_{G2}$), $p_{L}$ ($p_{L} = p_{L1} + p_{L2}$), and $p_{H}$ ($p_{H} = p_{H1} + p_{H2}$), respectively. The between functional group interactions are captured by $\omega_{GL}$, $\omega_{GH}$, and $\omega_{LH}$ with $\omega_{G}$, $\omega_{L}$,  and $\omega_{H}$ capturing the within-functional group interaction for grasses, legumes, and herbs, respectively. The additional effects of fertiliser treatment are captured by $\alpha_{150}$ and $\alpha_{250}$ with $A_{150}$ and $A_{250}$ being dummy variables for a specific level of fertiliser treatment. Finally, the error term $\epsilon$ is assumed to be normal with mean $0$ and variance $\sigma^2$. 
+
+The `R` code for fitting this model using `glm()` along with the model output is presented below.
+
+```{r}
+cust_model <- glm(response ~ 0 + G1 + G2 + L1 + L2 + H1 + H2 + 
+                          bfg_GL + bfg_GH + bfg_LH + 
+                          wfg_G + wfg_L + wfg_H + 
+                          treatment150 + treatment250, 
+             data = model_data)
 ```
 
 The model coefficients are as follows.
-Note: We have dropped the intercept from this model due to the compositional nature of the variables in the model.
 ```{r}
-summary(mod)
+summary(cust_model)
 ```
+
+::: {.notebox}
+*Note:* The intercept has been dropped from this model due to the compositional nature of the predictors in the model.
+:::
 
 We proceed with this model and create visualisations for interpreting the results.
 
-### Model diagnostics plot
 
-We first use the `model_diagnostics` function to check if all the underlying model assumptions are satisfied.
+### Visualisations
 
-The only difference here is that in addition to the model object we also need to specify the `prop` parameter describing the name of the compositional variables in the model where `species` is a previously defined vector naming the six columns in the datast that contain the species proportions.
+The model object stored in `cust_model` will be used for creating all the visualisations shown in this section. We will follow the "Modular plotting" workflow shown on the right side in Figure 3 from the main manuscript where the data needed for each visualisation will be created first and modified as per our needs and then passed on to the respective plotting function to create the visualisation.
 
-```{r diagnostics-plot, fig.height=8, fig.width = 9}
-# Create model diagnostics plot with pie-glyphs showing species proportions
-model_diagnostics(model = mod, prop = species)
+We first define a common set of variables which will be used across the board for ease of use
+
+```{r, variables}
+# Names of the compositional predictors (i.e., species) in the model
+species <- c("G1", "G2", "L1", "L2", "H1", "H2")
+
+# Functional groupings of the species
+FG <- c("G", "G", "L", "L", "H", "H")
+
+# Colours to be used for the six compostional variables (species) in plots
+var_cols <- get_colours(vars = species, FG = FG)
 ```
 
-These plots indicate that model assumptions aren't violated. Overlaying with pie-glyphs has the additional benefit that we can quickly identify the communities with unusual values. For example, the monocultures (communities with only one species) have a very high leverage value as seen in the `Residuals vs Leverage` plot.
+#### Model diagnostics plot
+
+Let's first examine the model diagnostics plots for our fitted model to ensure there are no severe problems with the model assumptions. 
+
+The data needed for creating the diagnostics plot is prepared using the `model_diagnostics_data()` function. The primary difference here (and in all other functions) compared to using the "Direct plotting" functions (workflow on left site of Figure 3 in main manuscript) is that the names of the compositional predictors should to be specified in the `prop` parameter.
+
+```{r, DiagData}
+diag_data <- model_diagnostics_data(
+  model = cust_model,  # Regression model object
+  prop = species)      # Names of the compositional predictors
+```
+
+The `model_diagnostics_data()` function returns the original data fitted to the model with additional columns containing diagnostic information for each observation. The returned data looks as follows.
+
+```{r, print_diag}
+head(diag_data, 8)
+```
+
+The data-preparation functions also add additional attributes to the prepared data which are accessed by the plotting functions for creating the visualisations. In this case, the primary attribute added to the data is the names of the compositional predictors with the key `"prop"` and can be accessed as follows.
+
+```{r, diag_attr}
+attr(diag_data, "prop")
+```
+
+The prepared data-frame can be updated if the user desires to add any additional columns or modify any existing ones and then be passed to the `model_diagnostics_plot()` function for creating the visualisation as follows.
 
 
-### Prediction contributions plot
-We manually call the `prediction_contributions_data` function to prepare the data for visualising the contributions of the various terms in the regression model to the predicted response.
+```{r, diag_plot, fig.width=10, fig.height=6}
+model_diagnostics_plot(
+    data = diag_data, # Output data-frame returned by model_diagnostics_data()
+    which = c(1, 2),  # Only print first 2 plots to save space
+    pie_colours = var_cols # Colours for the pie-slices
+  )
+```
 
-We use a subset of the original data consisting of the six monocultures and the equi-proportional community at the 50 kg fertilisation treatment.
+<br>
 
-<i>Note: It is important for the specified `data` to have all the variables in the model. An error will be thrown if any variable is missing.</i>
+It might be desirable to reduce over-plotting by showing only the extreme observations as pie-glyphs and rendering the remaining as points. The `only_extremes` in conjunction with the `npoints` argument can be used.
+
+```{r, diag_plot2, fig.width=10, fig.height=6}
+model_diagnostics_plot(
+    data = diag_data, 
+    which = c(1, 2),  
+    pie_colours = var_cols,
+    only_extremes = TRUE, # Show only extreme points as pie-glyphs
+    npoints = 5) # Show the five most extreme points as pie-glyphs (default is 3)
+
+```
+
+The "Residual vs Fitted" plot in the above figure indicates that the residuals are centered around the `y = 0` line and have a relatively constant variance across the board. The "QQ-Plot" indicates that the normality assumption doesn't seem to violated. The observations highlighted with [pie-glyphs](https://rishvish.github.io/PieGlyph/) are primarily containing `'H2'` which indicates that the model may not be capturing information about `'H2'` very well and we might have to investigate it further.
+
+The figure can also be customised further if needed. For example, suppose the user wishes to overlay the "Residual vs Fitted" plot with pie-glyphs but only for those observations receiving the 250 kg nitrogen treatment. This can be achieved with the following code with the output shown below:
+
+```{r, diag_plot3, fig.width=8, fig.height=6}
+# Extract data for containing observations recieving 250 N treatment
+data_250 <- diag_data %>% 
+  filter(treatment250 == 1)
+
+# We first create the diagnostic plot
+diag_plot <- model_diagnostics_plot(
+    data = diag_data, 
+    which = c(1),   # Only show residual vs fitted plot
+    pie_colours = var_cols,
+    only_extremes = TRUE, # Show only extreme points as pie-glyphs
+    npoints = 0, # Show the no extreme points as pie-glyphs
+  )
+
+# Now we can use traditional ggplot machinery to modify the plot
+diag_plot + 
+  # Manually add pie-glyphs using the subsetted data from above
+  geom_pie_glyph(data = data_250, slices = species, colour = "black")
+```
+
+
+#### Prediction contributions
+
+The `prediction_contributions_data()` function can be called to create the template data needed for visualising the contributions of the various terms in the model to the predicted response. 
+
+We first create a subset of the data for which the predictions contributions should be visualised. For this example we will visualise the six monocultures, 50-50 mixtures of the two grasses, legumes and herb along with the six-species centroid mixture receiving the 250kg nitrogen treatment. These communities can be subsetted from the data as follows
+
+```{r, data_subset}
+subset_data <- model_data %>% 
+  # Filter only those observations recieving 250 N treatment
+  filter(treatment250 == 1) %>% 
+  distinct(G1, G2, L1, L2, H1, H2, .keep_all = TRUE) %>% 
+  # Filter specific communities
+  filter(
+    # Six monocultures
+    (G1 == 1 | G2 == 1 | L1 == 1 | L2 == 1 | H1 == 1 | H2 == 1) | 
+    # Two species mixtures
+    ((G1 == 0.5 & G2 == 0.5) | (L1 == 0.5 & L2 == 0.5) | (H1 == 0.5 & H2 == 0.5)) |
+    # Six species centroid
+    (near(G1, 0.16667, tol = 0.01)))
+  
+head(subset_data)
+```
+
+This data containing the specific commmunities of interest can be passed to the `prediction_contributions_data()` function to create the template necessary for visualising the contributions. 
+
+::: {.notebox}
+*Note:* All predictors variables from the model should be present in the data or the function would throw an error.
+:::
+
 ```{r}
-subset_data <- model_data[c(1, 4, 7, 10, 13, 16, 45), ]
-print(subset_data)
+pred_cont_data <- prediction_contributions_data(
+    model = cust_model, # Model used for making predicitons 
+    data = subset_data,  # Data containing the observation for which to make prediction
+    # X-axis labels to be used for the bars
+    bar_labs = c("G1", "G2", "L1", "L2", "H1", "H2", "G-G", "L-L", "H-H", "Cent.")
+  ) 
+head(pred_cont_data)
 ```
+
+The prepared data now contains additional columns (`.Contributions` and `.Value`) which describe the contributions of each model term to the response for each community. The predicted response (`.Pred`) along with the uncertainty (95% by default) around it is also present (`.Upper` and `.Lower`). Finally, there is additional information about the grouping and labelling for each community (`.Community` and `.x_labs`). 
+
+::: {.notebox} 
+*Note:* If the data passed to this function had $n$ rows and the model had $p$ coefficients, the resultant data will have $n*p$ rows.
+:::
+
+
+:::{.highlightbox}
+
+If the model was not fit in R, or for some reason if the user doesn't have access to the fitted model object, it is also possible to obtain the same data by using the model coefficients. 
+
+Suppose we only had access to the following coefficients.
+
+:::
+
+```{r, mod-coeffs}
+(mod_coeffs <- coef(cust_model))
+```
+
+:::{.highlightbox}
+
+The same data as before could be generated as follows. We specify an additional argument `coeff_cols` which gives the names of columns corresponding to the coefficients.
+
+:::
+
+```{r, pred-cont-coeffs}
+pred_cont_data <- prediction_contributions_data(
+    coefficients = mod_coeffs, # Model coeffecients 
+    coeff_cols = names(mod_coeffs), # Column names corresponding to the coefficients
+    data = subset_data,  # Data containing the observation for which to make prediction
+    # X-axis labels to be used for the bars
+    bar_labs = c("G1", "G2", "L1", "L2", "H1", "H2", "G-G", "L-L", "H-H", "Cent.")
+  ) 
+head(pred_cont_data)
+```
+
+:::{.notebox}
+*Note:* When using model coefficients for generating the data, the uncertainty information around the prediction won't be available by default. However, this information can be obtained as well if the user passes the variance-covariance matrix of the coefficients in the `vcov` argument.
+:::
+
+Using the prepared data, the prediction-contributions plot can be generated using the `prediction_contributions_plot()` function. By default, only the data argument is needed, however, it often helps to manually specify the colours for each contribution via the `'colours'` argument to make the plot more informative.
+
+```{r, pred_cont1, fig.width=8, fig.height=6}
+prediction_contributions_plot(
+  data = pred_cont_data, # Output data from prediction_contributions_data()
+  colours = c(# Colours for the six species contributions
+              var_cols, 
+              # Colours for between FG interactions
+              get_shades("#DDCC77", shades = 3)[[1]], 
+              # Colours for within FG interactions
+              get_shades("#D55E00", shades = 3)[[1]],
+              # Colours for nitrogen treatment
+              get_shades("#505050", shades = 2)[[1]]))
+```
+
+The above figure shows the G1 monoculture performs best among monocultures and has comparable performance to the six-species centroid mixture. Additionally, the within grass interaction ("wfg_G") is stronger than the within legume ("wfg_L") and within herb ("wfg_H") interactions. However, the between FG interactions ("bfg_*") contribute more towards the predicted response compared to within FG interactions.  
+
+For situations when there are too many predictors in the model, it is also possible to group similar terms so that their total contribution is shown using a single segment on the bar by using the `groups` argument in the `prediction_contributions_data()` function. The output visualisation with grouped FG interaction terms is shown below.
 
 ```{r}
-plot_data <- prediction_contributions_data(data = subset_data,
-                                           model = mod)
-plot_data
+pred_cont_data_grouped <- prediction_contributions_data(
+    model = cust_model, 
+    data = subset_data,
+    # We group the three between and within FG interactions into single terms
+    groups = list("Between FG ints." = c("bfg_GL", "bfg_GH", "bfg_LH"),
+                  "Within FG ints." = c("wfg_G", "wfg_L", "wfg_H")),
+    # X-axis labels to be used for the bars
+    bar_labs = c("G1", "G2", "L1", "L2", "H1", "H2", "G-G", "L-L", "H-H", "Cent.")
+  ) 
+# Notice the .Contributions column
+head(pred_cont_data_grouped, 10)
 ```
 
-`subset_data` is expanded to include the model predictions (`.Pred`) along with the associated uncertainty (`.Lower` and `.Upper`). We also have a column labelled `.Contributions` identifying the names of all variables in the model along their values in `.Value`.
+Notice how the `.Contributions` column now has the combined between and within FG interactions as opposed to those at the individual functional group level.
 
-A benefit of using the data preparation functions is that, it's also possible to create the data using model coefficients. This is particularly useful for cases when your statistical model is fit using a different software (SAS, SPSS, etc.) and it's difficult to fit the same model in R. We could simply import the coefficients from the external model and use those to create our visualisations.
+
+```{r, pred_cont2, fig.width=8, fig.height=6}
+grouped_cont_plot <- prediction_contributions_plot(
+  data = pred_cont_data_grouped, # Output data from prediction_contributions_data()
+  colours = c(# Colours for the six species contributions
+              var_cols, 
+              # Colours for nitrogen treatment
+              get_shades("#505050", shades = 2)[[1]],
+              # Colours for between FG interactions
+              "#DDCC77", 
+              # Colours for within FG interactions
+              "#0072B2"))
+grouped_cont_plot
+```
+
+Finally, the output visualisation can also be customised with additional annotations if desired. For example, if the user wishes to overlay a reference line on the plot for comparisons purposes and separate by bars by species richness, they can do so using as follows. The output visualisation with these aesthetic changes is shown below
+
+```{r, pred_cont3, fig.width=8, fig.height=6}
+grouped_cont_plot +
+  # Add dashed reference line
+  geom_hline(yintercept = 25, linewidth = 1, 
+             colour = "black", linetype = "dashed") + 
+  facet_grid(~richness, labeller = label_both,
+             space = "free_x", scale = "free_x")
+```
+
+
+
+#### Conditional ternary diagrams
+
+The `conditional_ternary_data()` creates function creates a template `data.frame` which can be passed to `conditional_ternary_plot()` for creating conditional ternary diagrams. For simple models, calling `conditional_ternary_data()` would also add the predicted response across the ternary surface. However, for complex models with additional non-compositional predictors, by default the function would try to make predictions for the most reasonable values for these non-compositional predictors (base level for categorical and median value for continuous) but that won't always be desirable. So users have the option to generate a template data frame without predictions by setting `prediction = FALSE`. This template can then be modified to include any additional variables required for predictions before being passed to the appropriate plotting function for visualisation.
+
+The following code shows an example of creating such a template where we fix `G2` and `L2` at specific values and allow `G1`, `L1` and `H1` to vary between 0 and $G2 + L2$. 
+
+:::{.notebox}
+*Note:* Since `H2` is not specified here, it is assumed to be zero.
+:::
+
 ```{r}
-coeffs <- c("p1" = 30.23, "p2" = 20.20, "p3" = 22.13,
-            "p4" = 23.88, "p5" = 13.60, "p6" = 15.67,
-            "AV:treatment50" = 11.46,
-            "AV:treatment150" = 22.99,
-            "AV:treatment250" = 30.37)
-# One could also export the variance-covariance matrix from another 
-# software as a .csv file and read it here using the read.csv() function
-vcov_mat <- vcov(mod)
+cond_tern_template <- conditional_ternary_data(
+  prop = species, # Names of the compositional predictors
+  tern_vars = c("G1", "L1", "H1"), # Names for the three predictors to show in the ternary
+  # The values at which to fix the remaining predictors
+  # Any compositional predictors not specified here (e.g. H2) would be assumed to be 0 
+  conditional = data.frame("G2" = c(0.2, 0.1), 
+                           "L2" = c(0.1, 0.3)),
+  # Do not add predictions
+  prediction = FALSE)
 
-print(coeffs)
-
-# Note when using model-coefficients, the data should be in the same order 
-# as the model coefficients
-# We can use the model.matrix function to prepare our subset data in the necessary format
-coeff_data <- model.matrix(~ 0 + p1 + p2 + p3 + p4 + p5 + p6 + AV:treatment,
-                           data = subset_data) %>% 
-  as.data.frame()
-print(coeff_data)
-
-# Notice how the column names of the coefficients and coeff_data match exactly
-
-# Use coefficients and vcov parameter to specify the coefficients and 
-# variance-covariance matrix respectively.
-# Note: specifing a vcov matrix is necessary only if the user want the 
-# uncertainty associated with the prediction
-plot_data <- prediction_contributions_data(data = coeff_data,
-                                           coefficients = coeffs,
-                                           vcov = vcov_mat)
-head(plot_data)
+head(cond_tern_template)
 ```
 
-This data can then be passed to the `prediction_contributions_plot` function to visualise the results.
-```{r prediction-contributions-plot, fig.width=8}
-prediction_contributions_plot(data = plot_data)
-```
+The template has all the necessary columns along with additional attributes needed for creating conditional ternary diagrams. 
 
-The predicted response is highest for the `p1` monoculture. The centroid community also has a high prediction with the highest contribution coming from `p1` and the average interaction term.
-
-### Average change over diversity gradient
-We can use the `gradient_change_data` function to prepare data for visualising
-the average change in the predicted response over a diversity gradient. The resultant data would have the `.Richness` and `.Evenness` gradient values, `.Gradient` would have the name of the gradient chosen the calculate the average, `.Pred` has the predicted response while `.Avg` would have the average predicted response at each level of chosen diversity gradient.
-
-<i> Note: The calculated average is the mean of the communities specified in the data and not the average of all possible communities.</i> 
 ```{r}
-plot_data <- gradient_change_data(data = model_data, prop = species,
-                                  model = mod)
-head(plot_data)
+attributes(cond_tern_template)[-2]
 ```
 
-The output data can be passed to `gradient_change_plot` to visualise the results. We use the `facet_var` parameter and specify `"treatment"` to create a separate panel for each treatment.
-```{r gradient-change-plot, fig.width=8}
-gradient_change_plot(data = plot_data, 
-                     facet_var = "treatment")
+The necessary additional columns needed for making the predictions can be added using a `dplyr` pipeline or base R. 
+
+:::{.notebox}
+*Note:* If any specific transformation were made to any columns in the raw data before model fitting, the same transformation should be also be added to this template to ensure predictions are accurate.
+:::
+
+We create datasets for making two ternaries, one for communities at 150 kg nitrogen treatment and other at 250 kg nitrogen treatment. The between- and within- functional group interaction terms are also added to the data.
+
+Predicting response for communities at 150 kg nitrogen treatment
+
+```{r, add_cols1}
+cond_tern_template150 <- cond_tern_template %>% 
+  # Add values for the interaction columns to data
+  mutate(wfg_G = G1*G2, wfg_L = L1*L2, wfg_H = H1*H2,
+         bfg_GL = (G1 + G2) * (L1 + L2),
+         bfg_GH = (G1 + G2) * (H1 + H2),
+         bfg_LH = (L1 + L2) * (H1 + H2)) %>%
+  # We first want ternary for treatment150
+  mutate(treatment150 = 1, treatment250 = 0)
+
+head(cond_tern_template150)
 ```
 
-As the richness increases, the predicted response increases but at a saturating rate. The average predicted response also increases as we increase the rate of fertilisation.
+Predicting response for communities at 150 kg nitrogen treatment
 
-### Effects plot for compositional data
-The `visualise_effect_data` function can be used to create the data showing the change in the response as we increase/decrease the proportion of one of the variables in the data. Due to the compositional nature of the variables, changing the proportion of any one affects the proportion of all other variables. The function handles this by ensuring that as the proportion of any variable changes, all remaining variables are adjusted to ensure their relative proportion always stays constant.
+```{r, add_cols2}
+cond_tern_template250 <- cond_tern_template %>% 
+  # Add additional interaction columns to data
+  mutate(wfg_G = G1*G2, wfg_L = L1*L2, wfg_H = H1*H2,
+         bfg_GL = (G1 + G2) * (L1 + L2),
+         bfg_GH = (G1 + G2) * (H1 + H2),
+         bfg_LH = (L1 + L2) * (H1 + H2)) %>%
+  # This will create ternary for treatment250
+  mutate(treatment150 = 0, treatment250 = 1)
 
-We use the `subset_data` from before containing the six monocultures and six-species centroid community and see the effect of increasing the proportion of the species `p1` and `p3` (specified using `var_interest`) in these communities.
+head(cond_tern_template250)
+```
 
-<i> Note: Since the species interaction term depends on the proportions of the species, we use `prediction = FALSE` to create the template of species proportion first and then add the interaction structure.
+:::{highlightbox}
 
-Further, we manually call the `add_prediction` function to add the predictions to the resultant data.</i> 
+Once we have all the necessary columns needed for making predictions, they can be added either using the base R `predict()` function or the `add_prediction()` function from `DImodelsVis`. Both examples are shown here. Additionally, we also show an example of how to generate the predictions using model coefficients and their variance-covariance matrix instead of the model object.
+
+:::
+
+
+
+:::{notebox}
+
+*Note:* If using the base R `predict()` function, please ensure that the predictions are stored in a column called **".Pred"** as this is the column that the visualisation function accepts the predictions to be in.
+
+:::
+
 ```{r}
-plot_data <- visualise_effects_data(data = subset_data, prop = species,
-                                    var_interest = c("p1", "p3"),
-                                    effect = "increase",
-                                    prediction = FALSE)
-plot_data <- plot_data %>% mutate(AV = DI_data_E_AV(data = ., 
-                                                    prop = species)$AV)
-plot_data <- add_prediction(plot_data, model = mod, interval = "confidence")
+# Add predictions using helper function from DImodelsVis
+cond_tern_template150 <- cond_tern_template150 %>% 
+  add_prediction(model = cust_model)
+
+# Add predictions using model coefficients
+mod_coeffs <- coefficients(cust_model) # Coefficients
+vcov_mat <- vcov(cust_model)           # vcov matrix of coefficients
+
+cond_tern_template150 <- cond_tern_template150 %>% 
+  add_prediction(coefficients = mod_coeffs,
+                 vcov = vcov_mat)
+
+# Add predictions using base R predict function
+cond_tern_template250$.Pred <- predict(cust_model,
+                                       newdata = cond_tern_template250)
+
+head(cond_tern_template150)
+head(cond_tern_template250)
 ```
+
+These datasets with predictions can then be passed to the `conditional_ternary_plot()` function to create the conditional ternary diagrams. The output visualisation for 150 kg and 250 kg nitrogen treatment are shown below.
+
+To ensure the contours across the two plots are comparable we add the same upper and lower limits across the two using the `lower_lim` and `upper_lim` arguments.
+
+```{r, cond-limits}
+lwr_lim <- floor(min(cond_tern_template150$.Pred, cond_tern_template250$.Pred))
+upr_lim <- ceiling(max(cond_tern_template150$.Pred, cond_tern_template250$.Pred))
+```
+
+
+```{r, cond_tern1, fig.width=7, fig.height=4}
+conditional_ternary_plot(cond_tern_template150,
+                         contour_text = FALSE,
+                         lower_lim = lwr_lim,
+                         upper_lim = upr_lim)
+```
+
+```{r, cond_tern2, fig.width=7, fig.height=4}
+conditional_ternary_plot(cond_tern_template250,
+                         contour_text = FALSE,
+                         lower_lim = lwr_lim,
+                         upper_lim = upr_lim)
+```
+
+The contours appear to have the same structure across the two treatment levels, but the predicted yields are higher for the communities receiving 250 kg of N/ha/annum. Within a given level of the treatment, the predicted yield is maximised by increasing the proportion of G1.
+
+#### Grouped ternary diagrams
+
+The `grouped_ternary_data()` creates function creates a template `data.frame` which can be passed to `grouped_ternary_plot()` for creating grouped ternary diagrams. All functionality of this function is similar to that of the data-preparation and plotting functions for conditional ternary diagrams.
+
+As an example, we first call the `grouped_ternary_data()` function to create a template `data.frame` for grouped ternary diagram to which we will add the predictions later. Additionally, we use the `add_var` argument to specify that we want to fix treatment to be at 50 and 250 kg/annum. These values can still be added later to the data as we did for the example in the conditional ternary section. However, the benefit for adding them using `add_var` is that the function adds a special column to the data which will notify the plotting function to show the ternaries as separate panels within the same plot which allows us to avoid having to create separate plots for the two treatment levels. 
+
+:::{notebox}
+*Note:* The `add_var` argument is available for all data-preparation functions in the package.}
+:::
+
+```{r}
+group_tern_data <- grouped_ternary_data(
+  prediction = FALSE,                         # Do not make predictions now
+  prop = species,                             # Compositional predictors
+  FG = FG,                                    # Functional grouping
+  # Relative split within each FG. Equal split in this example
+  values = c(0.5, 0.5, 0.5, 0.5, 0.5, 0.5),    
+  # Values for additional non-compsitional predictors
+  add_var = list(treatment150 = c(0, 0),      
+                 treatment250 = c(0, 1))
+)
+head(group_tern_data)
+```
+
+The `.add_str_ID` column in the data notifies the plotting function that we wish to have separate ternaries for each unique value in this column. Optionally, we can edit the values in this column to get more informative labels.
+
+```{r}
+group_tern_data <- group_tern_data %>% 
+  mutate(.add_str_ID = ifelse(.add_str_ID == "treatment150: 0; \ttreatment250: 0",
+                              "Treatment: 50", "Treatment: 250"))
+```
+
+We can now add any interaction columns needed for making predictions and generate the predictions using any of the previously highlighted methods. The prepared data with the predictions added can then be passed to the `grouped_ternary_plot()` function to generate the visualisation. Additionally, we also show how the plot object can be further updated to include the best-performing community in each ternary using the `geom_point()` function from `ggplot2`.
+
+```{r, group_tern, fig.width=8, fig.height=4}
+# Add interaction columns and the prediction
+group_tern_data <- group_tern_data %>% 
+  # Add additional interaction columns to data
+  mutate(wfg_G = G1*G2, wfg_L = L1*L2, wfg_H = H1*H2,
+         bfg_GL = (G1 + G2) * (L1 + L2),
+         bfg_GH = (G1 + G2) * (H1 + H2),
+         bfg_LH = (L1 + L2) * (H1 + H2)) %>%
+  # Add predictions
+  add_prediction(model = cust_model)
+
+# Create visualisation
+group_tern_plot <- grouped_ternary_plot(
+  data = group_tern_data,
+  lower_lim = 15,
+  upper_lim = 40,
+  nlevels = 5)
+
+# Update plot to highlight the best-performing community in each ternary
+group_tern_plot +
+  # Add point highlighting the best performing community in each ternary
+  geom_point(data = function(x) x %>% filter(.Pred == max(.Pred)),
+             colour = "#505050", shape = 18, size = 4.5) +
+  # Reduce size of legend so they fit
+  theme(legend.key.width = unit(0.07, "npc"))
+```
+
+The contours appear to have the same structure across the two treatment levels, but the predicted yields are higher for the communities receiving 250 kg of N/annum. Within a given level of the treatment, the predicted yield is maximised by increasing the proportion of the grasses (G). The best performing community at each treatment level contains 100% grasses with no other functional group. Since the FG proportion is split equally between the component species in this example, the best performing community contains 50% each of G1 and G2.
+
+
+#### Simplex path plot
+
+For this example, the simplex-path plots would be useful to visualise the effect of increasing the functional group proportion on the predicted yield. We will visualise the change in the predicted yield between the six-species centroid mixture and the binary mixtures containing the two species from each functional group.
+
+We prepare the data for the visualisation using the `simplex_path_data()` function. As before, first the template without predictions is prepared and then predictions are added in manually after adding in any additional columns needed for the predictions.
+
+```{r, simp-path-data}
+starts <- tribble(~G1, ~G2, ~L1, ~L2, ~H1, ~H2,
+                  1/6, 1/6, 1/6, 1/6, 1/6, 1/6)
+ends <- tribble(~G1, ~G2, ~L1, ~L2, ~H1, ~H2,
+                1/2, 1/2,   0,   0,   0,  0,
+                  0,   0, 1/2, 1/2,   0,  0,
+                  0,   0,   0,   0, 1/2, 1/2)
+
+path_data <- simplex_path_data(
+  starts = starts,               # Starting compositions
+  ends = ends,                   # Ending compositions
+  prop = species,                # Names of compositional predictors
+  prediction = FALSE,            # Don't make predictions now
+  # We will visualise the paths at 150 and 250 level of treatment
+  add_var = list(treatment = c("150", "250"))
+)
+```
+
+Let's now add the interaction terms and convert the treatments into dummy variables. 
+
+```{r}
+path_data <- path_data %>% 
+  # Add additional interaction columns to data
+  mutate(wfg_G = G1*G2, wfg_L = L1*L2, wfg_H = H1*H2,
+         bfg_GL = (G1 + G2) * (L1 + L2),
+         bfg_GH = (G1 + G2) * (H1 + H2),
+         bfg_LH = (L1 + L2) * (H1 + H2)) %>% 
+  # Add dummy variables for treatment
+  mutate(treatment50 = ifelse(treatment == 50, 1, 0),
+         treatment150 = ifelse(treatment == 150, 1, 0),
+         treatment250 = ifelse(treatment == 250, 1, 0)) %>% 
+  # Add predictions and uncertainty around it
+  add_prediction(model = cust_model, interval = "confidence")
+
+head(path_data)
+```
+
+
+The data is expanded to include the following columns
+* `.InterpConst`: The interpolation constant between the start and end points (will be between 0 and 1).
+* `.Group`: An identifier for creating the `effects` curve.
+* `.Pred`: The predicted response for a community.
+* `.Lower`: The lower interval (at $\alpha = 0.05$ level) for the predicted response.
+* `.Upper`: The upper interval (at $\alpha = 0.05$ level) for the predicted response. 
+
+:::{.notebox}
+*Note:* As mentioned earlier, any columns added to the data before model-fitting should also be added to the template generated from the data-preparation functions to ensure we get accurate predictions. One could also add these columns directly to the `starts` and `ends` data.frames as well. However, it is recommended to not do so for two reasons. First, using the `add_var` argument will notify the corresponding plotting function to show the plots in separate panels for values specified in it. Secondly, the data-preparation functions might not always calculate the interaction terms properly if they are added before generating the template.}
+:::
+
+The prepared data can then be passed to the `simplex_path_plot()` function to create the visualisation. We also demonstrate how certain plot aesthetics can be modified using the arguments from the `simplex_path_plot()` function as well as the `labs()` function from `ggplot2`.
+
+```{r, path-plot, fig.width=10, fig.height=6}
+simplex_path_plot(
+  data = path_data,       # Data
+  pie_colours = var_cols, # Colours for the pie-glyphs
+  pie_radius = 0.35,      # Radius of pie-glyphs
+  se = TRUE,              # Show confidence band around predictions
+  # Show pie-glyphs at 0%, 25%, 50%, 75% and 100% along each path
+  pie_positions = c(0, 0.25, 0.5, 0.75, 1), 
+  nrow = 1, ncol = 2 # Arrange all plots in a 1 row and 2 columns
+) +
+  labs(y = "Predicted yield", fill = "Species") +
+  ylim(min(path_data$.Lower), max(path_data$.Upper))
+```
+
+The predicted yield for every community is higher at the 250 treatment level compared to the 150 level. At each level of treatment, compared to the centroid community the predicted yield increases as the sown proportion of grasses increases and decreases as the sown proportion of legumes and herbs increases.
+
+
+#### Effect plots
+
+For generating effects plot, just like the previous examples, we first prepare the data for the visualisation using the `visualise_effects_data()` function. We use the same subset-data that used earlier with the `prediction_contributions_data()` function and included the six monocultures, 50-50 mixtures of the two grasses, legumes and herb along with the six-species centroid mixture receiving the 250kg nitrogen treatment.
+
+```{r, eff-template}
+effects_data <- visualise_effects_data(
+  data = subset_data,            # Data containing the communities to use for plot
+  prop = species,                # Names of compositional predictors
+  var_interest = species,        # Generate effects plot for all species
+  prediction = FALSE             # Don't make predictions now
+)
+```
+
+Let's add the interaction terms and generate the predictions.
+
+```{r, eff-pred}
+effects_data <- effects_data %>% 
+  # Add additional interaction columns to data
+  mutate(wfg_G = G1*G2, wfg_L = L1*L2, wfg_H = H1*H2,
+         bfg_GL = (G1 + G2) * (L1 + L2),
+         bfg_GH = (G1 + G2) * (H1 + H2),
+         bfg_LH = (L1 + L2) * (H1 + H2)) %>% 
+  # Add predictions
+  add_prediction(model = cust_model)
+head(effects_data)
+```
+
 
 The data is expanded to include the following columns
 
@@ -179,101 +699,15 @@ The data is expanded to include the following columns
 - `.Lower`: The lower interval (at $% confidence level = 0.95$ level) for the predicted response.
 - `.Upper`: The upper interval (at $% confidence level = 0.95$ level) for the predicted response.
 
-Passing this data to `visualise_effects_plot` function results in the following plot.
-```{r visualise-effects-plot, fig.width=8}
-visualise_effects_plot(data = plot_data)
+The prepared data with the predicted yields can then be passed to the `visualise_effects_plot()` to generate the effects plot for each compositional predictor.
+
+```{r, effect-plot, fig.width=12, fig.height=9}
+visualise_effects_plot(
+  data = effects_data,    # Data
+  pie_colours = var_cols, # Colours for the pie-glyphs
+  pie_radius = 0.35       # Radius of pie-glyphs
+) +
+  labs(y = "Predicted yield", fill = "Species")
 ```
 
-Increasing the proportion of `p1` always results in an increase in the predicted response while increasing the proportion of `p3` could increase or decrease the predicted response depending on the proportion of the other species in the community.
-
-### Change in response across the simplex space
-This function is a more general version of effects plots and helps to visualise the change in the response as we move in a straight line between two points across the simplex space. Mathematically, this is equivalent to changing the proportion of multiple compositional variables whilst keeping the ratio of the remaining variables constant.
-
-To use `simplex_path_data` we should specify a data-frame consisting of starting and ending communities. In this example, we specify the six-species centroid mixture as our starting community and see the change in the response as we move towards the monoculture of each of the six species across all three fertiliser treatments.
-
-<i> Note: Just like `effect_plot_data`, we use `prediction = FALSE` to create the template of species proportion first and then add the interaction structure, followed by a call to the `add_prediction` function to add the predictions to the resultant data.</i>
-
-The data is expanded to include the following columns
-* `.InterpConst`: The interpolation constant between the start and end points (will be between 0 and 1).
-* `.Group`: An identifier for creating the `effects` curve.
-* `.Pred`: The predicted response for a community.
-* `.Lower`: The lower interval (at $\alpha = 0.05$ level) for the predicted response.
-* `.Upper`: The upper interval (at $\alpha = 0.05$ level) for the predicted response. 
-```{r}
-start_comm <- model_data %>% filter(richness == 6) %>% 
-  distinct(treatment, .keep_all = TRUE) %>% 
-  slice(rep(1:3, each = 6))
-
-end_comm <- model_data %>% filter(richness == 1) %>% 
-  distinct(p1, p2, p3, p4, p5, p6, treatment, .keep_all = TRUE)
-
-plot_data <- simplex_path_data(starts = start_comm,
-                               ends = end_comm,
-                               prop = species,
-                               prediction = FALSE)
-plot_data <- plot_data %>% mutate(AV = DI_data_E_AV(data = ., 
-                                                    prop = species)$AV)
-plot_data <- add_prediction(plot_data, model = mod, interval = "confidence")
-head(plot_data)
-```
-
-This data is passed to the `simplex_path_plot` function to create the data for creating the plot. We use `facet_var` to show a separate panel for each treatment and also show the uncertainty around the prediction using `se = TRUE`.
-```{r simplex-path-plot, fig.width=8}
-simplex_path_plot(data = plot_data, se = TRUE,
-                  facet_var = "treatment")
-```
-At `"50"` kg and `"150"` kg of fertiliser treatment, increasing the proportion of `p1` results in a higher predicted response, while increasing the proportion of other species decreases the predicted response. At `"250"` kg of fertilisation all monocultures perform worse than the centroid community and thus increasing their proportion decreases the response.
-
-### Conditional ternary plot
-We fix `n-3` variables to have a constant value $p_1, p_2, p_3, ..., p_{n-3}$ such that $P = p_1 + p_2 + p_3 + ... p_{n - 3}$ and $0 \leq P \leq 1$ and vary the proportion of the remaining three variables between $0$ and $1-P$ to visualise the change in the predicted response as a contour map within a ternary diagram.
-
-In this example we create two ternary diagrams showing the effect of changing the proportion of species `p1`, `p5` and `p6`; One where `p2 = 0` and `p3 = 0.3` and second with `p2 = 0.2` and `p3 = 0.3`. Any compositional variables not specified would be assumed to be 0 (thus `p4 = 0` in both diagrams). 
-
-We also use the `add_var` parameter to specify that the treatment value should be `"50"` and `"250"` for the plots. This could ignored and we could add the treatment value after creating the template, but the benefit of using `add_var` is that it adds an identifier to the data which is used to automatically create a separate panel for each value of treatment. 
-
-Since the interaction term is dependent on the species proportions, we use `prediction = FALSE` to create the template of proportions first, then add the interaction term. Finally, the `add_prediction` function is called to add the predictions to the data.
-
-```{r}
-plot_data <- conditional_ternary_data(prop = species, 
-                                      tern_vars = c("p1", "p5", "p6"),
-                                      add_var = list("treatment" = c("50", "250")),
-                                      conditional = data.frame("p2" = c(0, 0.3), 
-                                                               "p3" = c(0.2, 0.3)),
-                                      prediction = FALSE)
-
-plot_data <- plot_data %>% mutate(AV = DI_data_E_AV(data = ., 
-                                                    prop = species)$AV)
-plot_data <- add_prediction(plot_data, model = mod)
-head(plot_data)
-```
-
-
-We pass this data to the `conditional_ternary_plot` function to create the plot. We specify `nrow = 2` to arrange the plots for the two treatments in two rows.
-```{r conditional-ternary-plot, fig.height=10, fig.width=8}
-conditional_ternary_plot(data = plot_data, nrow = 2)
-```
-The predicted response is maximised as we increase the proportion of `p1` and a higher fertilisation results in higher predicted response.
-
-
-### Grouped ternary plot
-Sometimes, the compositional variables could be combined and grouped to reduce the number of variables. In this data the species `p1` and `p2` are assumed to be grasses, `p3` and `p4` are legumes, and `p5` and `p6` are herbs, thus we could combine these species to have three (grasses, legumes and herbs) compositional variables instead of six. 
-
-Using the `grouped_ternary_data` function we can visualise the change in the response as we change the proportion of grasses, legume, and herbs. The species are specified using the `prop` argument, while the group each species belongs to is specified using `FG`. There is a one-to-one mapping between `prop` and `FG`, thus for example `p1` and `p2` belong to the group `"Gr"`. There is also flexibility to adjust the proportion of the species within the functional group as well using the `values` parameter. In this example, each species within a group is 50% of the total group proportion. All other parameters are same as `conditional_ternary_data`. See `?grouped_ternary_data` for more information.
-```{r}
-plot_data <- grouped_ternary_data(prop = c("p1", "p2", "p3", "p4", "p5", "p6"), 
-                                  FG = c("Gr", "Gr", "Le", "Le", "He", "He"),
-                                  values = c(0.5, 0.5, 0.5, 0.5, 0.5, 0.5),
-                                  add_var = list("treatment" = c("50","250")),
-                                  prediction = FALSE)
-
-plot_data <- plot_data %>% mutate(AV = DI_data_E_AV(data = ., 
-                                                    prop = species)$AV)
-plot_data <- add_prediction(plot_data, model = mod)
-```
-
-We pass this data to the `grouped_ternary_plot` function to create the plot. We specify `nrow = 2` to arrange the plots for the two treatments in two rows.
-```{r grouped-ternary-plot, fig.height=8, fig.width=6}
-grouped_ternary_plot(data = plot_data, nrow = 2)
-```
-
-The figure shows that the predicted response is higher for the `"250"` kg treatment across the entire simplex space and within a given level of fertilisation the response is maximised by increasing the proportion of grasses and legumes.
+The average effect of increasing the proportion of each species follows a quadratic curve (solid black line). The average effect of increasing the sown proportion of G1 is stronger compared to the all other species. The other species have similar performance as their sown proportion is increased. Moreover, increasing the sown proportion of any species besides G1 over 50% results in a sharp decline in the predicted yield.

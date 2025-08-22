@@ -7,7 +7,7 @@
 #' `\link{prediction_contributions_plot}` function to visualise the results.
 #'
 #' @importFrom stats coef formula model.matrix
-#' @importFrom dplyr bind_cols ends_with row_number
+#' @importFrom dplyr bind_cols ends_with row_number pull
 #' @importFrom rlang := abort try_fetch
 #'
 #' @inheritParams prediction_contributions
@@ -140,7 +140,7 @@ prediction_contributions_data <- function(data, model = NULL, coefficients = NUL
 
     # If bar labs is specified as a column then fetch values from data
     if(length(bar_labs) == 1){
-      bar_labs <- rlang::try_fetch(data %>% dplyr::select(bar_labs),
+      bar_labs <- rlang::try_fetch(dplyr::pull(data, bar_labs),
                                    error = function(cnd)
                                    rlang::abort("The value specified in `bar_labs` is invalid.",
                                       parent = cnd))
@@ -152,7 +152,8 @@ prediction_contributions_data <- function(data, model = NULL, coefficients = NUL
 
   # Add bar labs
   data <- data %>%
-    mutate(".Community" = bar_labs)
+    mutate(".Community" = paste0("Community ", seq_along(bar_labs)),
+           ".x_labs" = bar_labs)
 
   # Add any experimental structures specified by user
   # Ensure experimental structure are specified correctly
@@ -164,14 +165,28 @@ prediction_contributions_data <- function(data, model = NULL, coefficients = NUL
   }
 
   interval <- match.arg(interval)
+
   # Add predictions from model/coefficients to check things are fine
-  pred_data <- add_prediction(data = data, model = model,
+  # First temporarily remove the columns we added
+  pred_data <- data %>% select(-all_of(c(".Community", ".x_labs")))
+  if(check_col_exists(pred_data, ".add_str_ID")){
+    pred_data <- data %>% select(-all_of(c(".add_str_ID")))
+  }
+  pred_data <- add_prediction(data = pred_data, model = model,
                               coeff_cols = coeff_cols,
                               coefficients = coefficients,
                               vcov = vcov,
                               interval = interval,
-                              conf.level = conf.level)
+                              conf.level = conf.level) %>%
+    # Add them back
+    mutate(".Community" = data$.Community,
+           ".x_labs" = data$.x_labs)
+  if(check_col_exists(data, ".add_str_ID")){
+    pred_data <- pred_data %>%
+      mutate(.add_str_ID = data$.add_str_ID)
+  }
 
+  # browser()
   # Branch here if model is specified
   if(!is.null(model)){
     form <- formula(model)
@@ -183,46 +198,69 @@ prediction_contributions_data <- function(data, model = NULL, coefficients = NUL
   }
   # Branch here if regression coefficients are specified
   else if(!is.null(coefficients)){
-    coeff_data <- data %>% select(-.data$.Community)
+
+    coeff_data <- data %>% select(-all_of(c(".Community", ".x_labs")))
     if(check_col_exists(coeff_data, ".add_str_ID")){
-      coeff_data <- data %>% select(-.data$.add_str_ID)
+      coeff_data <- coeff_data %>% select(-all_of(c(".add_str_ID")))
     }
-    if(is.null(coeff_cols)){
-      X_matrix <- as.matrix(sapply(coeff_data[, colnames(coeff_data)], as.numeric))
-    } else {
-      if(length(coefficients) != length(coeff_cols)){
-        cli::cli_abort(c("The number of values specified for selecting and reordering
-                         data columns in {.var coeff_cols} should be same as the
-                         number of coefficients specified in the {.var coefficients}
-                         vector.",
-                         "i" = "The were {length(coefficients)} coefficients
-                         while {.var coeff_cols} specified {length(coeff_cols)}
-                         column{?s} to select."))
-      }
+
+    # If coefficients are named then order data columns accordingly
+    if(!is.null(names(coefficients)) & is.null(coeff_cols)){
+      # Same check runs in add_prediction as well, so if won't be needed
+      # if(!all(names(coefficients) %in% colnames(coeff_data))){
+      #   cli::cli_abort(c("All coefficient names should be present in the data as columns.",
+      #                    "i" = "{.var {names(coefficients)[!names(coefficients) %in% colnames(data)]}}
+      #                    {?was/were} not present in the data."))
+      # }
+      # Create X matrix
+      X_matrix <- as.matrix(sapply(coeff_data[, names(coefficients)], as.numeric))
+    }
+
+    # if(is.null(coeff_cols)){
+    #   X_matrix <- as.matrix(sapply(coeff_data[, colnames(coeff_data)], as.numeric))
+  else if(!is.null(coeff_cols)){
+    # This check too runs in add_prediction
+    # if(length(coefficients) != length(coeff_cols)){
+    #   cli::cli_abort(c("The number of values specified for selecting and reordering
+    #                      data columns in {.var coeff_cols} should be same as the
+    #                      number of coefficients specified in the {.var coefficients}
+    #                      vector.",
+    #                    "i" = "The were {length(coefficients)} coefficients
+    #                      while {.var coeff_cols} specified {length(coeff_cols)}
+    #                      column{?s} to select."))
+    # }
       X_cols <- coeff_data %>% select(all_of(coeff_cols))
       # Created X_matrix
       X_matrix <- as.matrix(sapply(X_cols, as.numeric))
+  }
+  # If neither coefficients are named nor a selection provided then
+  # assume the user has specified everything correctly and calculate predictions
+  else {
+      # Same for this one as well
+      # if(ncol(coeff_data)!=length(coefficients)){
+      #   cli::cli_abort(c("If coeficients are not named, then the number of columns in
+      #                    {.var data} should be the same as the number of coefficients.",
+      #                    "i" = "The were {length(coefficients)} coefficients
+      #                    while data had {ncol(data)} columns.",
+      #                    "i" = "Consider giving names to the coefficient vector
+      #                    specified in {.var coefficients} corresponding to the
+      #                    respective data columns or providing a selection of
+      #                    columns in {.var coeff_cols} corresponding (in
+      #                    sequential order) to each coefficient."))
+      # }
+      # Create X_matrix
+      X_matrix <- as.matrix(sapply(coeff_data, as.numeric))
     }
-    if(ncol(X_matrix)!=length(coefficients)){
-      cli::cli_abort(c("The number of columns in {.var data} should be the same as
-                         the number of coefficients.",
-                       "i" = "The were {length(coefficients)} coefficients
-                         while data had {ncol(data)} columns.",
-                       "i" = "Consider giving names to the coefficient vector
-                         specified in {.var coefficients} corresponding to the
-                         respective data columns or providing a selection of
-                         columns in {.var coeff_cols} corresponding (in
-                         sequential order) to each coefficient."))
-    }
+  }
+
+  # If model has theta then drop it from coefficients
+  if(!is.null(attr(model, "theta_flag")) && isTRUE(attr(model, "theta_flag"))){
+    coefficients <- coefficients[names(coefficients) != "theta"]
   }
 
   # Express the prediction into contribution from each coefficient in the model
   if (!is.null(attr(model, "DImodel")) && attr(model, "DImodel") == "FG"){
     nonFG_flag <- FALSE
-    # If model has theta then drop it from coefficients
-    if(!is.null(attr(model, "theta_flag")) && isTRUE(attr(model, "theta_flag"))){
-      coefficients <- coefficients[names(coefficients) != "theta"]
-    }
   } else {
     nonFG_flag <- TRUE
   }
@@ -234,6 +272,7 @@ prediction_contributions_data <- function(data, model = NULL, coefficients = NUL
 
   # Add identifier for each row
   contr_data$.Community <- data$.Community
+  contr_data$.x_labs <- data$.x_labs
 
   # Check coefficients can be properly grouped if groups are specified
   check_coeff_groupings(coefficients, groups)
@@ -247,13 +286,13 @@ prediction_contributions_data <- function(data, model = NULL, coefficients = NUL
   }
   # Add any variables left over after grouping the contributions
   grouped_data <- bind_cols(contr_data %>%
-                              select(-.data$.Community) %>%
+                              select(-".Community") %>%
                               select(-all_of(unlist(groups))),
                             grouped_data)
 
   # Name of the contributions prediction is split into
   contributions <- grouped_data %>%
-    select(-.data$.Community) %>%
+    select(-all_of(c(".Community", ".x_labs"))) %>%
     colnames()
 
   # If the data has an identifier for exp str then add that in and
@@ -268,12 +307,12 @@ prediction_contributions_data <- function(data, model = NULL, coefficients = NUL
 
   # Add all other columns
   miss <- setdiff(colnames(pred_data), colnames(grouped_data))
-
+  # browser()
   if(check_col_exists(pred_data, ".add_str_ID")){
     grouped_data <- grouped_data %>%
       left_join(pred_data %>% select(all_of(c(".Community", ".add_str_ID", miss))),
                 by = c(".Community", ".add_str_ID")) %>%
-      mutate(.Community = fct_inorder(.data$.Community)) %>%
+      mutate(.Community = fct_inorder(.data[[".Community"]])) %>%
       # Converting to long format so it's easier to plot
       pivot_longer(cols = all_of(contributions),
                    names_to = '.Contributions', values_to = '.Value')
@@ -281,7 +320,7 @@ prediction_contributions_data <- function(data, model = NULL, coefficients = NUL
     grouped_data <- grouped_data %>%
       left_join(pred_data %>% select(all_of(c(".Community", miss))),
                 by = ".Community") %>%
-      mutate(.Community = fct_inorder(.data$.Community)) %>%
+      mutate(.Community = fct_inorder(.data[[".Community"]])) %>%
       # Converting to long format so it's easier to plot
       pivot_longer(cols = all_of(contributions),
                    names_to = '.Contributions', values_to = '.Value')
@@ -380,7 +419,7 @@ prediction_contributions_plot <- function(data, colours = NULL, se = FALSE,
                                          "[{cli::pb_current}/{cli::pb_total}]   ETA:{cli::pb_eta}"
                                        )),
                     function(i){
-                      data_iter <- data %>% filter(.data$.add_str_ID == ids[i])
+                      data_iter <- data %>% filter(.data[[".add_str_ID"]] == ids[i])
                       plot <- prediction_contributions_plot_internal(data = data_iter,
                                                                      colours = colours,
                                                                      se = se, facet_var = facet_var,
@@ -425,7 +464,7 @@ prediction_contributions_plot <- function(data, colours = NULL, se = FALSE,
 #' @importFrom ggplot2 ggplot element_text aes geom_col labs geom_errorbar
 #'                     theme theme_bw facet_grid guides guide_legend coord_flip
 #'                     scale_fill_manual unit element_blank label_both
-#'                     scale_x_continuous
+#'                     scale_x_continuous scale_x_discrete
 #' @importFrom PieGlyph geom_pie_glyph
 #' @importFrom rlang !!! !! sym .data
 #' @importFrom stats predict
@@ -596,11 +635,6 @@ prediction_contributions <- function(model, data = NULL,
   # Get all species in the model
   model_species <- attr(model, "prop")
 
-  # If species were specified as column indices extract names
-  if(is.numeric(model_species)){
-    model_species <- colnames(original_data)[model_species]
-  }
-
   # If data is missing then use the original data used to fit the model
   # and choose a subset of the data to plot (two communities at each richness level)
   if(is.null(data)){
@@ -637,11 +671,20 @@ prediction_contributions <- function(model, data = NULL,
   new <- ncol(data)
 
   ## Add any experimental structures or missing terms
+  before_add_exp <- colnames(data)
   data <- add_exp_str(model = model, data = data)
+  after_add_exp <- colnames(data)
 
   ## Drop any _add columns
   if(attr(model, "DImodel") == "ADD"){
     data <- data %>% select(-all_of(paste0(model_species, "_add")))
+  }
+
+  # Drop exp str specified in add_var as they'll be add on at a later stage
+  added_exp_str <- setdiff(after_add_exp, before_add_exp)
+  common_exp_str <- intersect(names(add_var), added_exp_str)
+  if(length(common_exp_str) > 0){
+    data <- data %>% select(-all_of(common_exp_str))
   }
 
   # Split the predicted response into respective contributions
@@ -660,13 +703,9 @@ prediction_contributions <- function(model, data = NULL,
     ## Colours for interaction effects
     ## Number of interaction terms
     DImodel_tag <- attr(model, "DImodel")
-    if (is.null(DImodel_tag)) {
-      DImodel_tag <- "CUSTOM"
-    }
 
     if(DImodel_tag == "FG"){
-      n_ints <- ncol(DI_data_FG(prop = model_species, data = data,
-                                FG = attr(model, "FG"))$FG)
+      n_ints <- ncol(DI_data_FG(prop = model_species, data = data, FG = attr(model, "FG"))$FG)
     } else {
       n_ints <- new - old
     }
@@ -737,14 +776,22 @@ prediction_contributions_plot_internal <- function(data, colours = NULL,
   # Colours for the bar segments
   if(is.null(colours)){
     rlang::warn(c("No colours were specified for the response contributions.",
-                  "i" = "The default colours might not result in an informative
-                         plot, consider choosing specific colours to contrast
-                         the contributions of different groups in the response."),
+                  "i" = paste("The default colours might not result in an informative plot,",
+                               "consider choosing specific colours to contrast the contributions",
+                               "of different groups in the response.")),
                 .frequency = "once", .frequency_id = "2")
     colours <- get_colours(levels(factor(data$.Contributions)))
   }
 
   bar_orientation <- match.arg(bar_orientation)
+
+  # browser()
+  x_labs <- data %>%
+    group_by(.data$.Community) %>%
+    slice(1) %>%
+    ungroup() %>%
+    pull(".x_labs") %>%
+    `names<-`(unique(data$.Community))
 
   plot <- ggplot(data, aes(x = .data$.Community, y = .data$.Value,
                            fill = fct_rev(fct_inorder(.data$.Contributions))))+
@@ -752,6 +799,7 @@ prediction_contributions_plot_internal <- function(data, colours = NULL,
     theme_DI()+
     scale_fill_manual(values = rev(colours))+
     guides(fill = guide_legend(reverse = TRUE)) +
+    scale_x_discrete(labels = x_labs) +
     labs(y = 'Predicted Response',
          x = 'Community',
          fill = 'Contributions')
@@ -763,7 +811,8 @@ prediction_contributions_plot_internal <- function(data, colours = NULL,
 
     plot <- plot +
       geom_errorbar(aes(y = .data$.Pred,
-                        ymin = .data$.Lower, ymax = .data$.Upper),
+                        ymin = .data$.Lower,
+                        ymax = .data$.Upper),
                     colour = "black")
   }
 

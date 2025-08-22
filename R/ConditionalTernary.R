@@ -134,7 +134,7 @@ conditional_ternary_data <- function(prop, FG = NULL,
     cond_data <- grouped_ternary_data(prop = prop, FG = FG, values = values,
                                       tern_vars = tern_vars,
                                       conditional = conditional,
-                                      add_var = add_var, resolution = 3,
+                                      add_var = add_var, resolution = resolution,
                                       prediction = TRUE, ...)
     return(cond_data)
   }
@@ -146,8 +146,7 @@ conditional_ternary_data <- function(prop, FG = NULL,
   }
 
   if(length(prop) < 3){
-    cli::cli_abort(c("Ternary diagrams can only be created for models with more
-                      than or equal to 3 species.",
+    cli::cli_abort(c("Ternary diagrams can only be created for models with three or more predictors",
                      "i" = "Currently only {length(prop)} variables are specified in
                             {.var prop}."))
   }
@@ -390,7 +389,7 @@ conditional_ternary_plot <- function(data,
                                      lower_lim = NULL,
                                      upper_lim = NULL,
                                      tern_labels = colnames(data)[1:3],
-                                     contour_text = TRUE,
+                                     contour_text = FALSE,
                                      show_axis_labels = TRUE,
                                      show_axis_guides = FALSE,
                                      points_size = 2,
@@ -412,13 +411,13 @@ conditional_ternary_plot <- function(data,
     # If user didn't specify lower limit assume it to be min of predicted response
     if(is.null(lower_lim)){
       # Ensure rounding includes all values in range
-      lower_lim <- round(min(data[, ".Pred"]), 2) - 0.01
+      lower_lim <- round(min(data[, col_var]), 2) - 0.01
     }
 
     # If user didn't specify upper limit assume it to be max of predicted response
     if(is.null(upper_lim)){
       # Ensure rounding includes all values in range
-      upper_lim <- round(max(data[, ".Pred"]), 2) + 0.01
+      upper_lim <- round(max(data[, col_var]), 2) + 0.01
     }
 
     plots <- lapply(cli_progress_along(1:length(ids), name = "Creating plot",
@@ -557,7 +556,7 @@ conditional_ternary <- function(model,
                                 colours = NULL,
                                 lower_lim = NULL,
                                 upper_lim = NULL,
-                                contour_text = TRUE,
+                                contour_text = FALSE,
                                 show_axis_labels = TRUE,
                                 show_axis_guides = FALSE,
                                 axis_label_size = 4,
@@ -627,7 +626,7 @@ conditional_ternary_plot_internal <- function(data,
                                               lower_lim = NULL,
                                               upper_lim = NULL,
                                               tern_labels = colnames(data)[1:3],
-                                              contour_text = TRUE,
+                                              contour_text = FALSE,
                                               show_axis_labels = TRUE,
                                               show_axis_guides = FALSE,
                                               axis_label_size = 4,
@@ -768,18 +767,19 @@ check_conditional_parameter <- function(conditional, prop, tern_vars,
 
   nums <- apply(conditional, 2, is.numeric)
   if(!all(nums)){
-    cli::cli_abort(c("The values specified for conditioning should all be {.cls numeric}.",
-                    "i" = "{.val {cond_names[, !nums]}} {?is/are} are not {.cls numeric}."))
+    cli::cli_abort(c("The values specified for conditioning in {.var conditional} should all be {.cls numeric}.",
+                    "i" = "{.val {cond_names[!nums]}} {?is/are} are not {.cls numeric}."))
   }
 
   not_between_01 <- apply(conditional, 1, function(x){
     any(!between(x, 0, 1))
   })
+
   if(any(not_between_01)){
     cli::cli_abort(c("The values specified for conditioning a particular slice
-                    should all be between 0 and 1 describing the values at which to condition
+                    should all be between 0 and 1 describing the values along respective dimensions at which to condition
                      the n-dimensional simplex space.",
-                    "i" = "The values specified for slice{?/s} {.val {as.data.frame(t(conditional[not_between_01, ]))}} {?is/are} not between 0 and 1."))
+                    "i" = "Some values specified in row{?/s} {.val {as.character(seq_along(conditional)[not_between_01])}} {?is/are} not between 0 and 1."))
   }
 
   over1 <- apply(conditional, 1, function(x){
@@ -789,7 +789,7 @@ check_conditional_parameter <- function(conditional, prop, tern_vars,
     cli::cli_abort(c("The values specified for conditioning a particular slice
                     should have a sum less than 1 describing the values at which to condition
                      the n-dimensional simplex space.",
-                    "i" = "The values specified for slice{?/s} {.val {as.data.frame(t(conditional[over1, ]))}}
+                    "i" = "The values specified in row{?/s} {.val {as.character(seq_along(conditional)[over1])}}
                     sum over 1."))
   }
 

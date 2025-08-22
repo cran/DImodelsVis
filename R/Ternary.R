@@ -145,13 +145,13 @@ ternary_data <- function(prop = c(".P1", ".P2", ".P3"),
                      for models with more than three compositonal predictors."))
   }
 
-  if(!isTRUE(all.equal(resolution, as.integer(resolution))) ||
-                                     !between(resolution, 1, 10)){
-    cli::cli_warn(c("{.var resolution} should be a whole number with values
-                    between 1 and 10",
+  if(!between(resolution, 0, 10)){
+    cli::cli_warn(c("{.var resolution} should be a number with values
+                    between 0 and 10",
                     "i" = "The value specified for {.var resolution} was
                           {as.character(resolution)}.",
                     "i" = "Reverting back to the default value of 3."))
+    resolution <- 3
   }
 
   # Column variables containing the projections
@@ -255,7 +255,7 @@ ternary_data <- function(prop = c(".P1", ".P2", ".P3"),
 #'                  (if `show = "contours"`). The default is maximum of the prediction.
 #' @param contour_text A boolean value indicating whether to include labels on
 #'                     the contour lines showing their values
-#'                     (if `show = "contours"`). The default is \code{TRUE}.
+#'                     (if `show = "contours"`). The default is \code{FALSE}.
 #' @param nrow Number of rows in which to arrange the final plot
 #'             (when `add_var` is specified).
 #' @param ncol Number of columns in which to arrange the final plot
@@ -346,12 +346,12 @@ ternary_plot <- function(data, prop = NULL,
                          colours = NULL,
                          lower_lim = NULL,
                          upper_lim = NULL,
-                         contour_text = TRUE,
+                         contour_text = FALSE,
                          nrow = 0,
                          ncol = 0){
   if(missing(data)){
     cli::cli_abort(c("{.var data} cannot be empty.",
-                     "i" = "Specify a data-frame or tibble
+                     "i" = "Specify a data-frame or tibble containing compositional variables,
                      preferably the output of
                      {.help [{.fn {col_green('ternary_data')}}](DImodelsVis::ternary_data)} or
                      a data-frame with a similar structure and column names."))
@@ -465,7 +465,7 @@ ternary_plot_internal <- function(data, prop,
                                   upper_lim = NULL,
                                   tern_labels = c("P1", "P2", "P3"),
                                   show_contours = TRUE,
-                                  contour_text = TRUE,
+                                  contour_text = FALSE,
                                   show_axis_labels = TRUE,
                                   show_axis_guides = FALSE,
                                   points_size = 2,
@@ -501,16 +501,17 @@ ternary_plot_internal <- function(data, prop,
                     and create the plot but it might not always be possible.",
                           "i" = "To avoid this, consider using the
                     {.help [{.fun copy_attributes}](DImodelsVis::copy_attributes)}
-                    function to ensure the specified data has the necessary attributes
-                    after performing any data manipulation."))
+                    function on the data after performing any data manipulation operation
+                          to ensure the it has the necessary attributes."))
         } else {
-          cli::cli_abort(c("x" = "Certain attributes of the data which are needed to prepare
-                    the plot are missing. This could happen if any data manipulation
+          cli::cli_abort(c("x" = "Certain attributes of the data which are needed for plotting
+                    the response contours are missing. This could happen if any data manipulation
                     performed by the user messes up the {.cls data.frame} attributes.",
-                          "i" = "Use the
+                          "i" = "If you intended to plot raw points set the {.var show} argument to {.val points}",
+                          "i" = "If you indeed wish to plot contours, use the
                     {.help [{.fun copy_attributes}](DImodelsVis::copy_attributes)}
-                    function to ensure the specified data has the necessary attributes
-                    after performing any data manipulation."))
+                    function on the data after performing any data manipulation operation
+                          to ensure the it has the necessary attributes."))
         }
 
       }
@@ -569,6 +570,7 @@ ternary_plot_internal <- function(data, prop,
         cli::cli_warn(c("More than three labels were specified for the ternary
                         diagram. The first three labels in {.var tern_labels}
                         will be chosen"))
+        tern_labels <- tern_labels[1:3]
       } else {
         cli::cli_abort(c("Three labels are needed for the ternary, only
                          {length(tern_labels)} were specified."))
@@ -600,7 +602,6 @@ ternary_plot_internal <- function(data, prop,
         geom_contour(breaks = breaks, colour = 'black')+
         guides(fill = guide_colorbar(frame.colour = 'black',
                                      ticks.colour = 'black',
-                                     title = 'Prediction',
                                      show.limits = T))+
         theme_void()+
         theme(legend.key.size = unit(0.1, 'npc'),
@@ -610,7 +611,8 @@ ternary_plot_internal <- function(data, prop,
               strip.text = element_text(size =14, vjust = 0.5),
               legend.text = element_text(size = 12, angle = 45,
                                          vjust = 1.2, hjust = 1.2),
-              legend.position = 'bottom')
+              legend.position = "bottom") +
+        labs(fill = "Prediction")
     } else {
       # Base of plot
       pl <- ggplot(data, aes(x = .data[[x]], y = .data[[y]])) +
@@ -624,19 +626,19 @@ ternary_plot_internal <- function(data, prop,
               legend.position = 'bottom')
     }
 
+    # Labels for the ternary axes
+    axis_labels <- tibble(x1 = seq(0.2,0.8,0.2),
+                          y1 = c(0,0,0,0),
+                          x2 = .data$x1/2,
+                          y2 = .data$x1*sqrt(3)/2,
+                          x3 = (1-.data$x1)*0.5+.data$x1,
+                          y3 = sqrt(3)/2-.data$x1*sqrt(3)/2,
+                          label = .data$x1,
+                          rev_label = rev(.data$label),
+                          !! col_var := 0)
+
     # Showing axis labels
     if(show_axis_labels){
-      # Labels for the ternary axes
-      axis_labels <- tibble(x1 = seq(0.2,0.8,0.2),
-                            y1 = c(0,0,0,0),
-                            x2 = .data$x1/2,
-                            y2 = .data$x1*sqrt(3)/2,
-                            x3 = (1-.data$x1)*0.5+.data$x1,
-                            y3 = sqrt(3)/2-.data$x1*sqrt(3)/2,
-                            label = .data$x1,
-                            rev_label = rev(.data$label),
-                            !! col_var := 0)
-
       pl <- pl +
         geom_text(data = axis_labels,
                   aes(x=.data$x1, y=.data$y1, label=.data$label),
@@ -671,11 +673,13 @@ ternary_plot_internal <- function(data, prop,
     pl <- pl +
       geom_text(data = tibble(x = c(0.5, 0, 1), y = c(sqrt(3)/2, 0,  0),
                               label = tern_labels,
-                              !! col_var := 0),
+                              !! col_var := 0) %>%
+                  mutate(nudge_x = c(0, -0.05, 0.05),
+                         nudge_y = c(0.05, 0, 0)) %>%
+                  mutate(x = .data$x + .data$nudge_x,
+                         y = .data$y + .data$nudge_y),
                 aes(x= .data$x, y= .data$y, label = .data$label),
-                size = vertex_label_size, fontface='plain',
-                nudge_x = c(0, -0.05, 0.05),
-                nudge_y = c(0.05, 0, 0))+
+                size = vertex_label_size, fontface='plain')+
       geom_segment(data = tibble(x = c(0, 0, 1), y = c(0,0,0),
                                  xend = c(1, 0.5, 0.5),
                                  yend = c(0, sqrt(3)/2, sqrt(3)/2),

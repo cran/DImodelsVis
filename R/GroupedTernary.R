@@ -151,6 +151,7 @@ grouped_ternary_data <- function(prop, FG,
   tern_vars <- def_vals$tern_vars
   conditional <- def_vals$conditional
 
+  # browser()
   # Create base ternary data to be plotted
   triangle <- ternary_data(prop = tern_vars,
                            add_var = add_var,
@@ -160,7 +161,8 @@ grouped_ternary_data <- function(prop, FG,
   # If there are only three functional groups in the model
   # our data is ready and we can make predictions from the model after accounting for species proportions
   if (length(all_FGs) == 3){
-    triangle[, prop] <- 0
+    prop_not_in <- prop[!which(prop %in% colnames(triangle))]
+    triangle[, prop_not_in] <- 0
     focus <- tern_vars
     FG_mapping <- get_FG_value_mapping(FG, focus = focus)
 
@@ -254,28 +256,27 @@ grouped_ternary_data <- function(prop, FG,
 
         # To avoid any rounding issues and ensure all species proportions sum to 1
         # sp_data[, cond_sp] <- 1 - rowSums(sp_data[, tern_vars[1:3]])
+      prop_not_in <- prop[!which(prop %in% colnames(sp_data))]
 
-        sp_data[, prop] <- 0
-        focus <- all_FGs #c(tern_vars, cond_sp)
-        FG_mapping <- get_FG_value_mapping(FG, focus = focus)
+      sp_data[, prop_not_in] <- 0
+      focus <- all_FGs #c(tern_vars, cond_sp)
+      FG_mapping <- get_FG_value_mapping(FG, focus = focus)
 
-        for (FGs in focus){
-          ids <- FG_mapping[[FGs]]
-          # Converting to df because when there is only 1 prop, %o% returns
-          # a vector which causes conflicts
-          sp_data[, prop[ids]] <- (sp_data[, FGs] %o% values[ids]) %>%
-                                    as.data.frame() %>%
-                                    `colnames<-`(prop[ids])
-        }
+      for (FGs in focus){
+        ids <- FG_mapping[[FGs]]
+        # Converting to df because when there is only 1 prop, %o% returns
+        # a vector which causes conflicts
+        sp_data[, prop[ids]] <- (sp_data[, FGs] %o% values[ids]) %>%
+                                  as.data.frame() %>%
+                                  `colnames<-`(prop[ids])
+      }
 
-        # Predicting the response for the communities
-        if(prediction){
-          sp_data <- add_prediction(data = sp_data, ...)
-        }
+      # Predicting the response for the communities
+      if(prediction){
+        sp_data <- add_prediction(data = sp_data, ...)
+      }
 
-        # Need to return data via subset of rows as bind_rows fails otherwise
-        sp_data
-      # }) %>% bind_rows()
+      sp_data
     }) %>% bind_rows()
   }
 
@@ -376,7 +377,7 @@ grouped_ternary_plot <- function(data,
                                  lower_lim = NULL,
                                  upper_lim = NULL,
                                  tern_labels = colnames(data)[1:3],
-                                 contour_text = TRUE,
+                                 contour_text = FALSE,
                                  show_axis_labels = TRUE,
                                  show_axis_guides = FALSE,
                                  axis_label_size = 4,
@@ -387,6 +388,11 @@ grouped_ternary_plot <- function(data,
                      "i" = "Specify a data frame or tibble (preferably the
                             output of {.help [{.fn {col_green(\"grouped_ternary_data\")}}](DImodelsVis::grouped_ternary_data)})."))
   }
+
+  # Check data for important columns
+  check_plot_data(data = data,
+                  cols_to_check = c(col_var, ".x", ".y"),
+                  calling_fun = "grouped_ternary")
 
   pl <- conditional_ternary_plot(data = data,
                                  col_var = col_var,
@@ -503,7 +509,7 @@ grouped_ternary <- function(model,
                             colours = NULL,
                             lower_lim = NULL,
                             upper_lim = NULL,
-                            contour_text = TRUE,
+                            contour_text = FALSE,
                             show_axis_labels = TRUE,
                             show_axis_guides = FALSE,
                             axis_label_size = 4,
@@ -562,7 +568,8 @@ grouped_ternary <- function(model,
                                  show_axis_labels = show_axis_labels,
                                  show_axis_guides = show_axis_guides,
                                  axis_label_size = axis_label_size,
-                                 vertex_label_size = vertex_label_size)
+                                 vertex_label_size = vertex_label_size,
+                                 nrow = nrow, ncol = ncol)
     return(plot)
   } else {
     return(plot_data)
@@ -628,27 +635,27 @@ FG_sanity_checks <- function(prop, FG,
                      has length {length(prop)}."))
   }
 
-  if(any(prop %in% FG)){
-    cli::cli_abort(c("The names specified for grouping in the {.var FG}
-                    argument should be different than those specified in
-                    the {.var prop} argument.",
-                     "i" = "The group{?s} {.val {unique(FG)[unique(FG) %in% prop]}}
-                     from {.var FG} {?is/are} present in {.var prop}.
-                     Please change their names in {.var FG}."))
-  }
+  # if(any(prop %in% FG)){
+  #   # cli::cli_abort(c("The names specified for grouping in the {.var FG}
+  #   #                 argument should be different than those specified in
+  #   #                 the {.var prop} argument.",
+  #   #                  "i" = "The group{?s} {.val {unique(FG)[unique(FG) %in% prop]}}
+  #   #                  from {.var FG} {?is/are} present in {.var prop}.
+  #   #                  Please change their names in {.var FG}."))
+  # }
 
   if(is.null(values)){
     values <- get_FG_values(FG)
-    cli::cli_warn("The proportional split of species in the groups was not specified in {.var values},
-                  assuming an equal split for species in each group.")
+    cli::cli_warn("The proportional split of species in the groups was not specified in {.var values}.
+                  Assuming an equal split for species in each group.")
   } else {
     if(!is.numeric(values)){
-      cli::cli_abort(c("{.var values} should be a numeric vector with values between 0 and 1 specifying the proportion of each species within a function group.",
+      cli::cli_abort(c("{.var values} should be a numeric vector with values between 0 and 1 specifying the proportion of each species within a functional group.",
                        "i" = "{.var values} was specified as a {.cls {class(values)}} object."))
     }
 
     if(!all(between(values, 0, 1))){
-      cli::cli_abort(c("{.var values} should be a numeric vector with values between 0 and 1 specifying the proportion of each species within a function group.",
+      cli::cli_abort(c("{.var values} should be a numeric vector with values between 0 and 1 specifying the proportion of each species within a functional group.",
                        "i" = "{.var values} was specified with value{?s} {.val {as.character(values)}}."))
     }
 
@@ -662,7 +669,7 @@ FG_sanity_checks <- function(prop, FG,
     if(!all(sp_props_in_FG$bool)){
       faults <- sp_props_in_FG$sums[sp_props_in_FG$bool == F]
       cli::cli_abort(c("The species proportions within a functional group should sum to 1.",
-                       "i" = "The proportions for {names(faults)} equal {faults}. respectively."))
+                       "i" = "The sum of proportions specified in {.var values} corresponding to {.val {names(faults)}} sum to {faults}."))
     }
   }
 
@@ -727,7 +734,7 @@ FG_sanity_checks <- function(prop, FG,
 
   # Sanity checks for tern_vars
   if (!is.null(tern_vars) && !inherits(tern_vars, "character")){
-    cli::cli_abort("{.var tern_vars} should be a character vector of length 3,
+    cli::cli_abort("{.var tern_vars} should be a character vector of length 3
                    containing the names of the variables to be shown in the ternary.",
                    "i" = "{.var tern_vars} was specified as a
                           {.cls {tern_vars}}.")

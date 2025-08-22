@@ -119,6 +119,13 @@ simplex_path_data <- function(starts, ends, prop,
                      final variable proportions in {.var data}."))
   }
 
+  #Sanity Checks
+  if(missing(prop)){
+    cli::cli_abort(c("{.var prop} cannot be empty.",
+                     "i" = "Specify the column-names of the columns
+                           containing the variable proportions in {.var data}."))
+  }
+
   sanity_checks(data = starts, prop = prop,
                 booleans = list("prediction" = prediction))
   sanity_checks(data = ends, prop = prop)
@@ -137,7 +144,7 @@ simplex_path_data <- function(starts, ends, prop,
   if(ncol(starts) != ncol(ends) | !isTRUE(all.equal(colnames(starts), colnames(ends)))){
     all_comm <- union(colnames(starts), colnames(ends))
     int_comm <- intersect(colnames(starts), colnames(ends))
-    cli::cli_abort(c("The data in {.var starts} and {.var ends} should have identical columns.",
+    cli::cli_abort(c("The data in {.var starts} and {.var ends} should have same columns.",
                      "i" = "The following column{?s} don't match between {.var starts}
                      and {.var ends} {.val {all_comm[which(!all_comm %in% int_comm)]}}"))
   }
@@ -162,8 +169,7 @@ simplex_path_data <- function(starts, ends, prop,
     interpolated_data <- interpolate_communities(starts[i, species_names],
                                                  ends[i, species_names],
                                                  species_names) %>%
-      left_join(y = starts %>% select(-all_of(species_names)) %>% slice(i),
-                by = character()) %>%
+      dplyr::cross_join(y = starts %>% select(-all_of(species_names)) %>% slice(i)) %>%
       mutate(".InterpConst" = pvals,
              ".Group" = i) %>%
       select(all_of(species_names), everything())
@@ -330,6 +336,8 @@ simplex_path_plot <- function(data, prop = NULL,
 
   if(check_col_exists(data, ".add_str_ID")){
     ids <- unique(data$.add_str_ID)
+    lwr_lim <- ifelse(check_col_exists(data, ".Lower"), min(data$.Lower), min(data$.Pred))
+    upr_lim <- ifelse(check_col_exists(data, ".Upper"), max(data$.Upper), max(data$.Pred))
     plots <- lapply(cli_progress_along(1:length(ids), name = "Creating plot",
                                        format = paste0(
                                          "{cli::pb_spin} Creating plot ",
@@ -343,7 +351,7 @@ simplex_path_plot <- function(data, prop = NULL,
                                                  pie_colours = pie_colours, se = se,
                                                  facet_var = facet_var)+
                         labs(subtitle = ids[i]) +
-                        ylim(min(data$.Pred), max(data$.Pred))
+                        ylim(lwr_lim, upr_lim)
                     })
     if(length(plots) > 1){
       plot <- new("ggmultiplot", plots = plots, nrow = nrow, ncol = ncol)
@@ -468,7 +476,7 @@ simplex_path <- function(model, starts, ends, add_var = list(),
   # Ensure model is a DImodels object
   # Ensure specified model is fit using the DI function
   if(missing(model) || (!inherits(model, "DI") && !inherits(model, "DImulti"))){
-    model_not_DI(call_fn = "visualise_effects")
+    model_not_DI(call_fn = "simplex_path")
   }
 
   if(missing(starts)){
@@ -488,11 +496,6 @@ simplex_path <- function(model, starts, ends, add_var = list(),
 
   # Get all species in the model
   model_species <- attr(model, "prop")
-
-  # If species were specified as column indices extract names
-  if(is.numeric(model_species)){
-    model_species <- colnames(original_data)[model_species]
-  }
 
   interval <- match.arg(interval)
 
@@ -521,7 +524,7 @@ simplex_path <- function(model, starts, ends, add_var = list(),
                               pie_colours = pie_colours, se = se,
                               pie_radius = pie_radius,
                               facet_var = facet_var,
-                              nrow = 0, ncol = 0)
+                              nrow = nrow, ncol = ncol)
     return(plot)
   } else {
     return(plot_data)
@@ -616,7 +619,7 @@ simplex_path_plot_internal <- function(data, prop, pie_colours = NULL,
   # Adjust plot aesthetics
   plot <- plot +
     labs(fill = "Variable",
-         x = "Interpolation constant",
+         x = "Interpolation factor",
          y = "Predicted Response")+
          # caption = "The pie-glyphs on the left show the starting compositions
          # while those on the right show the ending compositions.

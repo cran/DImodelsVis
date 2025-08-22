@@ -219,7 +219,7 @@ visualise_effects_data <- function(data, prop, var_interest = NULL,
   # the species of interest
   if(effect == "decrease"){
     if(all(data[, var_interest] == 0)){
-      cli::cli_abort(c("Can't visualize effect of decrease of a variable if data doesn't contain the variable of interest",
+      cli::cli_abort(c("Can't visualise effect of decrease of a variable if data doesn't contain the variable of interest.",
       "i" = "Specify data which contain some non-zero proportion of the variable{?s} of
            interest (i.e., {.val {var_interest}}) to see the effect of {? its/their} decrease."))
     }
@@ -228,9 +228,9 @@ visualise_effects_data <- function(data, prop, var_interest = NULL,
   # Similarly no plots can be created if the user is trying to find the effect of adding a species to it's monoculture
   if(effect == "increase"){
     if(length(var_interest) == 1 & all(data[, var_interest] == 1)){
-      cli::cli_abort(c("Can't visualize effect of increase of a variable if only monocultures of
+      cli::cli_abort(c("Can't visualise effect of increase of a variable if only observations with 100% of
                        variable of interest are present.",
-                       "i" = "Specify data with rows other than the monoculture of the variable of interest,
+                       "i" = "Specify data with rows other than observations with 100% of the variable of interest,
                        i.e., {.val {var_interest}} should have values other than 1."))
     }
   }
@@ -255,22 +255,18 @@ visualise_effects_data <- function(data, prop, var_interest = NULL,
     x <- var_interest[idx]
     if(effect == "increase"){
       pothers <- data %>% filter(!(!!sym(x) %in% c(1)))
-      if(nrow(pothers) < 1){
-        cli::cli_text(c("The effect of increasing variable {.var {x}} can not be
-                        calculated as the given data only contains observations
-                        where {.var {x}} is 1 (i.e., only variable in the
-                        composition so it can't be increased)."))
-        return(NULL)
-      }
+      # Not needed as error is throw above
+      # if(nrow(pothers) < 1){
+      #   cli::cli_text(c("The effect of increasing variable {.var {x}} can not be calculated as the given data only contains observations where {.var {x}} is 1 (i.e., only variable in the composition so it can't be increased)."))
+      #   return(NULL)
+      # }
     } else if(effect == "decrease") {
+      # Not needed as error is throw above
       pothers <- data %>% filter(!(!!sym(x) %in% c(0)))
-      if(nrow(pothers) < 1){
-        cli::cli_text(c("The effect of decreasing variable {.var {x}} can not be
-                        calculated as the given data only contains observations
-                        where {.var {x}} is 0 (i.e., not present so can't be
-                        decreased)"))
-        return(NULL)
-      }
+      # if(nrow(pothers) < 1){
+      #   cli::cli_text(c("The effect of decreasing variable {.var {x}} can not be calculated as the given data only contains observations where {.var {x}} is 0 (i.e., not present so can't be decreased)."))
+      #   return(NULL)
+      # }
     } else {
       pothers <- data
     }
@@ -343,7 +339,7 @@ visualise_effects_data <- function(data, prop, var_interest = NULL,
       mutate('.Marginal' = c(.data$.dy[1:(length(.data$.dy) - 1)], .data$.dy[(length(.data$.dy) - 1)]),
              '.Threshold' = .data$.Proportion[abs(.data$.Marginal) == min(abs(.data$.Marginal))][1],
              '.MarEffect' = ifelse(!!sym(".Proportion") < .data$.Threshold, 'Negative', 'Positive')) %>%
-      select(-.data$.dy) %>%
+      select(-all_of(c(".dy"))) %>%
       ungroup() %>%
       as.data.frame()
 
@@ -480,6 +476,8 @@ visualise_effects_plot <- function(data, prop, pie_colours = NULL,
 
   if(check_col_exists(data, ".add_str_ID")){
     ids <- unique(data$.add_str_ID)
+    lwr_lim <- ifelse(check_col_exists(data, ".Lower"), min(data$.Lower), min(data$.Pred))
+    upr_lim <- ifelse(check_col_exists(data, ".Upper"), max(data$.Upper), max(data$.Pred))
     plots <- lapply(cli_progress_along(1:length(ids), name = "Creating plot",
                                        format = paste0(
                                          "{cli::pb_spin} Creating plot ",
@@ -494,7 +492,7 @@ visualise_effects_plot <- function(data, prop, pie_colours = NULL,
                                                       se = se,
                                                       average = average)+
                         labs(subtitle = ids[i]) +
-                        ylim(min(data$.Pred), max(data$.Pred))
+                        ylim(lwr_lim, upr_lim)
                     })
     if(length(plots) > 1){
       plot <- new("ggmultiplot", plots = plots, nrow = nrow, ncol = ncol)
@@ -660,11 +658,6 @@ visualise_effects <- function(model, data = NULL, var_interest = NULL,
   # Get all species in the model
   model_species <- attr(model, "prop")
 
-  # If species were specified as column indices extract names
-  if(is.numeric(model_species)){
-    model_species <- colnames(original_data)[model_species]
-  }
-
   # If the user has not specified neither of communities, equi or model_data.
   # Then default to plotting the design communities
   if(is.null(data)){
@@ -686,8 +679,9 @@ visualise_effects <- function(model, data = NULL, var_interest = NULL,
   if(!is.null(data)){
     # Ensure data are specified as a data-frame and in proper format
     if(!inherits(data, "data.frame")){
-      stop("Specify data to show effects for in the plot as a data frame
-           with proportions of the different species")
+      cli::cli_abort(c("{.var data} was not a data.frame",
+      "i"="Specify data to show effects for in the plot as a data frame
+           with proportions of the different species"))
     } else {
 
       sp_abs <- !model_species %in% colnames(data)
@@ -743,7 +737,8 @@ visualise_effects <- function(model, data = NULL, var_interest = NULL,
                                    pie_colours = pie_colours,
                                    pie_radius = pie_radius,
                                    se = se,
-                                   average = average)
+                                   average = average,
+                                   nrow = nrow, ncol = ncol)
     return(plot)
   } else {
     return(plot_data)

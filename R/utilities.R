@@ -57,7 +57,7 @@ add_add_var <- function(data, add_var = NULL){
   sanity_checks(data = data)
 
   if(!is.null(add_var)){
-    if(!is.list(add_var)){
+    if(!inherits(add_var, "list") && !inherits(add_var, "data.frame")){
       cli::cli_abort(c("The value specified in {.var add_var} should be a list
                        or data-frame.",
                        "i" = "Currently a value of class {.cls {class(add_var)}}
@@ -88,7 +88,8 @@ add_add_var <- function(data, add_var = NULL){
       colnames(data)[idx] <- paste0(colnames(data)[idx], ".data")
     }
     # Merge experimental structures with species communities
-    data <- merge(data, add_var_data, by = NULL)
+    data <- merge(data, add_var_data, by = NULL) %>%
+      copy_attributes(data)
     # data <- left_join(data, add_var_data, by = character())
   }
   return(data)
@@ -102,7 +103,7 @@ NULL
 colour_blind_friendly_cols <- function(n){
   # A safe colour-blind palette created by combining Okabe-Ito colours
   # and safe colour pallete from rcartocolor
-  safe_colorblind_palette <- c("#009E73", "#D55E00", "#AA4499",  "#0072B2", "#F0E442", "#661100",
+  safe_colorblind_palette <- c("#009E73", "#AA4499", "#0072B2", "#F0E442", "#D55E00", "#661100",
                                "#332288", "#CC6677", "#E69F00", "#88CCEE", "#882255", "#DDCC77",
                                "#56B4E9", "#117733", "#CC79A7", "#44AA99", "#484848", "#999933",
                                "#6699CC", "#000000")
@@ -195,6 +196,8 @@ get_shades <- function(colours = c("#808080"), shades = 3){
   # Map the shades of colours to the original colour
   names(new_cols) <- colours
 
+  # Desaturate colours
+  new_cols <- lapply(new_cols, function(x) colorspace::desaturate(x, 0.25))
   return(new_cols)
 }
 
@@ -325,7 +328,7 @@ get_equi_comms <- function(nvars,
                 characters = list("variables" = variables))
 
   if(any(!between(richness_lvl, 1, nvars))){
-    cli::cli_abort(c("{.var richness_lvl} can have values between 1 and {nvars}.",
+    cli::cli_abort(c("{.var richness_lvl} can take values between 1 and {nvars}.",
                      "i" = "{.var richness_lvl} has value{?s}
                      {.val {as.character(richness_lvl[!between(richness_lvl, 1, nvars)])}}
                      outside this range."))
@@ -380,7 +383,7 @@ get_equi_comms <- function(nvars,
 #'
 #' @usage NULL
 NULL
-get_richness <- function(data, prop){
+get_richness <- function(data, prop = NULL){
   # Special situation if funtion is called in dplyr pipeline as .data doesn't
   # allow to select over multiple columns
   if (inherits(data, "rlang_data_pronoun")) {
@@ -400,7 +403,7 @@ get_richness <- function(data, prop){
 #'
 #' @usage NULL
 NULL
-get_evenness <- function(data, prop){
+get_evenness <- function(data, prop = NULL){
   # Special situation if funtion is called in dplyr pipeline as .data doesn't
   # allow to select over multiple columns
   if (inherits(data, "rlang_data_pronoun")) {
@@ -420,8 +423,8 @@ get_evenness <- function(data, prop){
 #'
 #' @usage NULL
 NULL
-get_comm_sum <- function(data, prop){
-  # Special situation if funtion is called in dplyr pipeline as .data doesn't
+get_comm_sum <- function(data, prop = NULL){
+  # Special situation if function is called in dplyr pipeline as .data doesn't
   # allow to select over multiple columns
   if (inherits(data, "rlang_data_pronoun")) {
     # Add filler column to create data frame
@@ -565,11 +568,16 @@ check_presence <- function(data, col, message = NULL){
 #' @usage NULL
 NULL
 add_facet <- function(plot, data, facet_var, ...){
-  facet_var <- rlang::try_fetch(data %>% dplyr::select(facet_var),
+  facet_var <- rlang::try_fetch(data %>% dplyr::select(all_of(facet_var)),
                                 error = function(cnd)
                                   rlang::abort(c("The value specified in `facet_var` is invalid."),
                                                parent = cnd,
                                                call = caller_env())) %>% colnames()
+  if(length(facet_var) > 1){
+    cli::cli_warn(c("Currently facetting is supported only with a single variable",
+                  "i" = "Selecting to facet on the first specified value, i.e., {.val {facet_var[1]}}"))
+    facet_var <- facet_var[1]
+  }
 
   plot <- plot +
     facet_wrap(as.formula(paste("~", facet_var)),
@@ -580,7 +588,7 @@ add_facet <- function(plot, data, facet_var, ...){
 #' Default theme for DImodelsVis
 #'
 #' @importFrom ggplot2 theme_bw theme element_text element_rect %+replace%
-#' @importFrom dplyr between
+#' @importFrom dplyr between cross_join
 #' @importFrom cli cli_abort
 #'
 #' @param font_size Base font size for text across the plot
@@ -620,8 +628,7 @@ theme_DI <- function (font_size = 14, font_family = "",
   } else if(all(is.numeric(legend))){
     if(!all(between(legend, 0, 1))){
       cli_abort(c("If specified as a numeric vector the values for the legend
-                  should be between 0 and 1.",
-                  "i" = "You specified the values as {.var x = {x}} and {.var y = {y}}"))
+                  should be between 0 and 1."))
     }
   } else {
     cli_abort(c("{.var legend} should be of type {.cls character} or {.cls numeric}.",
@@ -704,11 +711,11 @@ add_interaction_terms <- function(data, model){
   sanity_checks(DImodel = model, data = data)
   data <- as.data.frame(data)
   DImodel_tag <- attr(model, "DImodel")
-  if (is.null(DImodel_tag)) {
-    DImodel_tag <- "CUSTOM"
-  }
+
   if (DImodel_tag == "CUSTOM") {
-    cli::cli_alert_warning("Cannot add interaction terms for a custom DI model.")
+    cli::cli_warn(c("!" = "Cannot add interaction terms for a custom DI model.",
+                    "i"= "Returning original data-frame"))
+    return(data)
   }
   original_data <- model$original_data
   model_data <- eval(model$model)
@@ -721,7 +728,7 @@ add_interaction_terms <- function(data, model){
 
   only_one_row <- nrow(data) == 1
   if (only_one_row) {
-    data <- rbind(data, rep(0, ncol(data)))
+    data <- rbind(data, data)
   }
   theta_flag <- model$coefficients["theta"]
   betas <- coef(model)
@@ -822,6 +829,13 @@ add_ID_terms <- function(data, model){
   # Ensure model is a DImodels object
   sanity_checks(DImodel = model, data = data)
 
+  DImodel_tag <- attr(model, "DImodel")
+  if (DImodel_tag == "CUSTOM") {
+    cli::cli_warn(c("!" = "Cannot add identity terms for a custom DI model.",
+                    "i"= "Returning original data-frame"))
+    return(data)
+  }
+
   # Get original species proportion columns
   prop <- attr(model, "prop")
 
@@ -829,9 +843,6 @@ add_ID_terms <- function(data, model){
   sanity_checks(data = data, prop = prop)
 
   ID <- attr(model, "ID")
-  if(is.null(ID)){
-    ID <- paste0(prop, "_ID")
-  }
 
   data <-  group_prop(data = data, prop = prop, FG = ID)
 
@@ -840,7 +851,15 @@ add_ID_terms <- function(data, model){
 
 
 #' @title Add predictions and confidence interval to data using either
-#' a model object or model coefficients
+#' a model object or model coefficients.
+#'
+#' @description
+#' This function accepts a data.frame and either a model object or coefficients
+#' and adds columns containing the predictions and associated uncertainty to the
+#' data. When a model object is specified, the function uses
+#' \code{\link[insight]{get_predicted}()} from the
+#' \code{\link[insight]{insight}} package under the hood to
+#' generate the predictions.
 #'
 #' @importFrom insight get_predicted
 #'
@@ -966,7 +985,7 @@ add_ID_terms <- function(data, model){
 #'                interval = "prediction", vcov = vcov_mat)
 add_prediction <- function(data, model = NULL,
                            coefficients = NULL, coeff_cols = NULL, vcov = NULL,
-                           interval = c("none","confidence", "prediction"),
+                           interval = c("none", "confidence", "prediction"),
                            conf.level = 0.95){
 
   if(missing(data)){
@@ -979,8 +998,8 @@ add_prediction <- function(data, model = NULL,
   # Ensure model or coefficients are specified correctly
   check_data_functions(model = model, coefficients = coefficients)
 
-  # If model is specified ensure it is appropriate
-  sanity_checks(model = model, data = data,
+  # Check other parametesr to ensure they are appropriate
+  sanity_checks(data = data,
                 numerics = list("conf.level" = conf.level),
                 unit_lengths = list("conf.level" = conf.level))
 
@@ -1000,15 +1019,16 @@ add_prediction <- function(data, model = NULL,
     # Prediction with SE
     if(inherits(model, "DI")){
       if(interval != "none"){
-        preds <- suppressWarnings(predict(model, newdata = data,
-                                          interval = interval, level = conf.level)) %>%
+        preds <- predict(model, newdata = data,
+                         interval = interval,
+                         level = conf.level) %>%
           as.data.frame()
         data <- data %>%
           mutate(".Pred" := preds$fit,
                  ".Lower" = preds$lwr,
                  ".Upper" = preds$upr)
       } else{
-        preds <- suppressWarnings(predict(model, newdata = data, se.fit = FALSE))
+        preds <- predict(model, newdata = data, se.fit = FALSE)
         data <- data %>%
           mutate(".Pred" := preds)
       }
@@ -1017,24 +1037,63 @@ add_prediction <- function(data, model = NULL,
       data <- data %>%
         mutate(".Pred" := preds)
     } else {
-      preds <- suppressWarnings(suppressMessages(insight::get_predicted(x = model, data = data)))
+      # These are custom model objects
+      # First see if they are supported by insight and
+      base_pred_flag <- FALSE
+      if(isTRUE(insight::is_model_supported(model))){
+        preds <- insight::get_predicted(x = model, data = data) %>%
+          suppressMessages() %>% suppressWarnings()
 
-      data <- data %>%
-        mutate(".Pred" := as.numeric(preds))
+        # Prediction from insight has failed give alert and move on
+        if(length(preds) != nrow(data)){
+          cli::cli_alert_warning("Unable to generate predictions using {.pkg insight}, will retry with base R {.fn {col_green(\"predict\")}} function")
+          base_pred_flag <- TRUE
+        } else {
+        # Keep moving forward with generating CI using insight
+          data <- data %>%
+            mutate(".Pred" := as.numeric(preds))
+          if(interval != "none"){
+            CIs <- insight::get_predicted_ci(x = model,
+                                             predictions = preds,
+                                             data = data,
+                                             ci = conf.level,
+                                             ci_type = interval) %>%
+              suppressMessages() %>% suppressWarnings()
 
-      if(interval != "none"){
-        CIs <- suppressWarnings(suppressMessages(insight::get_predicted_ci(x = model,
-                                                                           predictions = preds,
-                                                                           data = data,
-                                                                           ci = conf.level,
-                                                                           ci_type = interval)))
-
-        if(ncol(CIs) > 1){
-          data <- data %>% mutate(".Lower" = CIs[, "CI_low"],
-                                  ".Upper" = CIs[, "CI_high"])
+            if(ncol(CIs) > 1){
+              data <- data %>% mutate(".Lower" = CIs[, "CI_low"],
+                                      ".Upper" = CIs[, "CI_high"])
+            }
+          }
         }
+      } else {
+        # Insight doesn't support model. So use base R prediction function
+        base_pred_flag <- TRUE
       }
-    }
+
+      if(isTRUE(base_pred_flag)){
+        # Final hail mary for model objects not supported by insight or if prediction failed
+        # there try if predictions can be made using the base predict function
+        tryCatch(
+          {
+            preds <- predict(model, data)
+            data <- data %>% mutate(".Pred" := as.numeric(preds))
+
+            if(interval != "none"){
+              cli::cli_warn(c("It wasn't possible to automatically generate uncertainty intervals for the specified model object.",
+                              "i" = "Please generate them manually and add them to the data as columns named {.val .Lower} and {.val .Upper}, respectively."))
+            }
+          },
+          error = function(e) {
+            cli::cli_abort(c("It wasn't possible to automatically generate predictions for the specified model object.",
+                             "i" = "The following error was encountered when running the {.fn {col_green(\"predict\")}} function:",
+                             "x" = cli::col_red(conditionMessage(e)),
+                             "i" = "Please generate the predictions manually and add them to the data as a column named {.val .Pred}.",
+                             "i" = "If this error is encountered from any data-preparation function, i.e. {.fn {col_green(\"*_data\")}}, rerun the function with {.var prediction = FALSE} and then manually add predictions to the data as a column named {.val .Pred}."))
+          }
+        )
+      }
+      }
   }
   # Branch here if regression coefficients are specified
   else if(!is.null(coefficients)){
@@ -1047,7 +1106,7 @@ add_prediction <- function(data, model = NULL,
                        with class {.cls {class(coefficients)}}."))
     }
     # If coefficients are named then order data columns accordingly
-    if(!is.null(names(coefficients))){
+    if(!is.null(names(coefficients)) && is.null(coeff_cols)){
       if(!all(names(coefficients) %in% colnames(data))){
         cli::cli_abort(c("All coefficient names should be present in the data as columns.",
                          "i" = "{.var {names(coefficients)[!names(coefficients) %in% colnames(data)]}}
@@ -1076,10 +1135,10 @@ add_prediction <- function(data, model = NULL,
     # assume the user has specified everything correctly and calculate predictions
     else {
       if(ncol(data)!=length(coefficients)){
-        cli::cli_abort(c("The number of columns in {.var data} should be the same as
-                         the number of coefficients.",
+        cli::cli_abort(c("If coeficients are not named, then the number of columns in
+                         {.var data} should be the same as the number of coefficients.",
                          "i" = "The were {length(coefficients)} coefficients
-                         while data had {ncol(data)} columns.",
+                         while data had {ncol(data)} columns (after adding anything which was specified in {.val add_var}).",
                          "i" = "Consider giving names to the coefficient vector
                          specified in {.var coefficients} corresponding to the
                          respective data columns or providing a selection of
@@ -1100,15 +1159,15 @@ add_prediction <- function(data, model = NULL,
                                with class {.cls {class(vcov)}}."))
       }
       if(nrow(vcov) != ncol(vcov)){
-        cli::cli_abort(c("{.var vcov} should be a symettric square matrix.",
-                         "i" = "Currently {.var vcov} has {nrow(vcov)} rows
-                         and {ncol(vcov} columns."))
+        cli::cli_abort(c("{.var vcov} should be a symmetric square matrix.",
+                         "i" = "Currently {.var vcov} has {.val {nrow(vcov)}} rows
+                         and {.val {ncol(vcov)}} columns."))
       }
-      if(ncol(X_matrix)!=ncol(vcov)){
-        cli::cli_abort(c("The number of columns in {.var data} should be the
-                         same as the number of columns in {.var vcov}",
-                         "i" = "The were {ncol(vcov)} columns in {.var vcov}
-                         while data had {ncol(data)} columns."))
+      if(length(coefficients) != ncol(vcov)){
+        cli::cli_abort(c("The number of rows and columns in {.var vcov} should be the
+                         same as the number of coefficients",
+                         "i" = "The were {.val {ncol(vcov)}} columns in {.var vcov}
+                         while there were {.val {length(coefficients)}} coefficients"))
       }
 
       # Calculate SE
@@ -1120,7 +1179,7 @@ add_prediction <- function(data, model = NULL,
       upr <- preds + critval * se
     } else {
       if(interval != "none"){
-        cli::cli_warn(c("{.var vcov} was not specified so confidence
+        cli::cli_warn(c("{.var vcov} was not specified so uncertainty
                         intervals cannot be calculated.",
                         "i" = "The {.val .Upper} and {.val .Lower} columns
                         will contain the same value as the {.val .Pred} column."))
@@ -1207,13 +1266,13 @@ add_prediction <- function(data, model = NULL,
 #'                    special = "equi == TRUE & monos == FALSE"))
 #'
 #' # Can also use normal filter
-#' sim3 %>% custom_filter(p1 == 1, special = NULL, prop = NULL)
+#' sim3 %>% custom_filter(p1 == 1)
 #'
 #' # Both special filtering and normal filtering can be combined as well
 #' sim3 %>% custom_filter(prop = paste0("p", 1:9),
 #'                        special = "richness == 1",
 #'                        community %in% c(7, 9))
-custom_filter <- function(data, prop = NULL, special = NULL, ...){
+custom_filter <- function(data, ..., prop = NULL, special = NULL){
   # Sanity Checks
   if(missing(data)){
     cli::cli_abort(c("{.var data} cannot be empty.",
@@ -1325,7 +1384,7 @@ prop_to_tern_proj <- function(data, prop,
   data <- data %>%
     mutate(!! y := !!sym(prop[1]) * sqrt(3)/2,
            !! x := !!sym(prop[3]) + (!!sym(y))/sqrt(3)) %>%
-    select(all_of(prop), x, y, everything())
+    select(all_of(c(prop, x, y)), everything())
   return(data)
 }
 
@@ -1422,7 +1481,7 @@ tern_to_prop_proj <- function(data, x, y,
     mutate(!! prop[1] := !!sym(y) * 2/sqrt(3),
            !! prop[3] := !!sym(x) - !!sym(y)/sqrt(3),
            !! prop[2] := 1 - (!! sym(prop[1]) + !!sym(prop[3]))) %>%
-    select(x, y, all_of(prop), everything())
+    select(all_of(c(x, y, prop)), everything())
   return(data)
 }
 
@@ -1492,7 +1551,7 @@ group_prop <- function(data, prop, FG = NULL){
     for (gr in all_gr){
       filter_prop <- prop[which(FG == gr)]
       data[, gr] <- data %>%
-        select(filter_prop) %>%
+        select(all_of(filter_prop)) %>%
         rowSums()
     }
   }
@@ -1697,12 +1756,25 @@ predict_from_DImulti <- function(model, newdata = model$original_data, ...){
   # Get ID_col
   ID_col <- attr(model, "unitIDs")
   if(check_col_exists(newdata, ID_col)){
-    newdata <- newdata %>% select(-ID_col)
+    newdata <- newdata %>% select(-all_of(ID_col))
+  }
+  cols <- colnames(newdata)
+  if (any(c("AV", "E", "NULL", "NA") %in% cols)) {
+    cols_to_remove <- cols[cols %in% c("AV", "E", "NULL", "NA")]
+    newdata <- newdata %>% select(-all_of(cols_to_remove))
+  }
+  if (any(startsWith(colnames(newdata), c("FULL.", "FG.")))) {
+    cols_to_remove <- cols[startsWith(cols, c("FULL.", "FG."))]
+    newdata <- newdata %>% select(-all_of(cols_to_remove))
+  }
+  if (any(endsWith(colnames(newdata), c("_add")))) {
+    cols_to_remove <- cols[endsWith(cols, c("_add"))]
+    newdata <- newdata %>% select(-all_of(cols_to_remove))
   }
   preds <- suppressWarnings(predict(object = model, newdata = newdata,
                                     stacked = F, ...))
   preds <- preds %>% mutate(across(everything(), function(x) ifelse(is.nan(x), 0, x)))
-  preds <- rowSums(preds[, -1])
+  preds <- if (ncol(preds) > 2) rowSums(preds[, -1]) else preds[, -1]
   return(preds)
 }
 
@@ -1711,7 +1783,30 @@ predict_from_DImulti <- function(model, newdata = model$original_data, ...){
 #'
 #' @usage NULL
 NULL
-add_exp_str <- function(model, data){
+add_exp_str <- function(data, model){
+
+  if(missing(data)){
+    cli::cli_abort(c("{.var data} cannot be empty.",
+                     "i" = "Specify a data-frame or tibble containing species
+                     proportions that sum to 1 to create the appropriate
+                     interaction structures."))
+  }
+
+  if(missing(model)){
+    cli::cli_abort(c("{.var model} cannot be empty.",
+                     "i" = "Specify a model object fit using the
+                     {.help [{.pkg DImodels}](DImodels::DImodels)} or
+                     {.help [{.pkg DImodelsMulti}](DImodelsMulti::DImodelsMulti)}
+                     R packages."))
+  }
+
+  DImodel_tag <- attr(model, "DImodel")
+  if (DImodel_tag == "CUSTOM") {
+    cli::cli_warn(c("!" = "Cannot add experimental structures for a custom DI model.",
+                    "i"= "Returning original data-frame"))
+    return(data)
+  }
+
   original_data <- model$original_data
   # Checking for experimental structures
   treat <- eval(model$DIcall$treat)
@@ -1813,7 +1908,9 @@ add_exp_str <- function(model, data){
 
         # If levels of factors in extra_formula in data not matching ones in original data, stop prediction
         if (! (all(unique(updated_newdata[, i]) %in% xlevels[[i]], na.rm = TRUE))){
-          stop(paste0('Values for ', covariate,' given were not present in raw data used for fitting. Predictions can\'t be made for these values.'))
+          cli::cli_abort(c("Values given for {.val {i}} were not present in
+                           training data used for fitting.",
+                           "i" = "Predictions can not be made for these values."))
         }
 
         # If factors in extra_formula is supplied as character or numeric, converting to factor

@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# DImodelsVis <img src="man/figures/logo.png" align="right" height="139" />
+# DImodelsVis <img src="man/figures/logo.png" align="right" height="139" alt = "logo"/>
 
 <!-- badges: start -->
 
@@ -10,6 +10,8 @@ status](https://www.r-pkg.org/badges/version/DImodelsVis)](https://CRAN.R-projec
 [![Lifecycle:
 stable](https://img.shields.io/badge/lifecycle-stable-brightgreen.svg)](https://lifecycle.r-lib.org/articles/stages.html#stable)
 [![R-CMD-check](https://github.com/rishvish/DImodelsVis/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/rishvish/DImodelsVis/actions/workflows/R-CMD-check.yaml)
+[![Codecov test
+coverage](https://codecov.io/gh/rishvish/DImodelsVis/graph/badge.svg)](https://app.codecov.io/gh/rishvish/DImodelsVis)
 <!-- badges: end -->
 
 Statistical models fit to compositional data are often difficult to
@@ -44,22 +46,22 @@ devtools::install_github("rishvish/DImodelsVis")
 While sometimes it is of interest to model a compositional data
 response, there are times when the predictors of a response are
 compositional, rather than the response itself. Diversity-Interactions
-(DI) models ([Kirwan et al., 2009](https://doi.org/10.1890/08-1684.1),
-[Connolly et al., 2013](https://doi.org/10.1111/1365-2745.12052), [Moral
-et al., 2023](https://doi.org/10.1111/2041-210X.14158)) are a regression
-based modelling technique for analysing and interpreting data from
-biodiversity experiments that explore the effects of species diversity
-on the different outputs (called ecosystem functions) produced by an
-ecosystem. Traditional techniques for analysing diversity experiments
-quantify species diversity in terms of species richness (i.e., the
-number of species present in a community). The DI method builds on top
-of this richness approach by taking the relative abundances of the
-species within in the community into account, thus the predictors in the
-model are compositional in nature. The DI approach can differentiate
-among different species identities as well as between communities with
-same set of species but with different relative proportions, thereby
-enabling us to better capture the relationship between diversity and
-ecosystem functions within an ecosystem. The
+(DI) models ([Kirwan et al., 2009](doi:10.1890/08-1684.1), [Connolly et
+al., 2013](doi:10.1111/1365-2745.12052), [Moral et al.,
+2023](doi:10.1111/2041-210X.14158)) are a regression based modelling
+technique for analysing and interpreting data from biodiversity
+experiments that explore the effects of species diversity on the
+different outputs (called ecosystem functions) produced by an ecosystem.
+Traditional techniques for analysing diversity experiments quantify
+species diversity in terms of species richness (i.e., the number of
+species present in a community). The DI method builds on top of this
+richness approach by taking the relative abundances of the species
+within in the community into account, thus the predictors in the model
+are compositional in nature. The DI approach can differentiate among
+different species identities as well as between communities with same
+set of species but with different relative proportions, thereby enabling
+us to better capture the relationship between diversity and ecosystem
+functions within an ecosystem. The
 [`DImodels`](https://cran.r-project.org/package=DImodels) and
 [`DImodelsMulti`](https://cran.r-project.org/package=DImodelsMulti) R
 packages are available to aid the user in fitting these models. The
@@ -73,7 +75,11 @@ in nature.
 
 <div style="display: block; margin-left: auto; margin-right: auto;  width: 60%; max-width:75;">
 
-![](man/figures/DImodelsVis_workflow_package.png)
+<figure>
+<img src="man/figures/DImodelsVisWorkflowPackage.png"
+alt="Package workflow" />
+<figcaption aria-hidden="true">Package workflow</figcaption>
+</figure>
 
 </div>
 
@@ -148,22 +154,22 @@ library(DImodelsVis)
 
 This dataset originates from a grassland biodiversity experiment
 conducted in Switzerland as part of the “Agrodiversity Experiment”
-[Kirwan et al 2014](https://doi.org/10.6084/m9.figshare.c.3307098.v1).
-In this study, 68 grassland plots consisting of 1 to 4 species were
-established across a gradient of species diversity. The proportions of
-four species were varied across the plots: there were plots with 100% of
-a single species (called the monoculture of a species), and 2- and
-4-species mixtures with varying proportions (e.g., (0.5, 0.5, 0, 0) and
-(0.7, 0.1, 0.1, 0.1)). Nitrogen fertilizer (at 50 or 150 kg/ha/yr) and
-seeding density (low or high) treatments were also manipulated across
-the plots. The total annual yield per plot was recorded for the first
-year after establishment. The data is available in the
+[Kirwan et al 2014](doi:10.6084/m9.figshare.c.3307098.v1). In this
+study, 68 grassland plots consisting of 1 to 4 species were established
+across a gradient of species diversity. The proportions of four species
+were varied across the plots: there were plots with 100% of a single
+species (called the monoculture of a species), and 2- and 4-species
+mixtures with varying proportions (e.g., (0.5, 0.5, 0, 0) and (0.7, 0.1,
+0.1, 0.1)). Nitrogen fertilizer (at 50 or 150 kg/ha/yr) and seeding
+density (low or high) treatments were also manipulated across the plots.
+The total annual yield per plot was recorded for the first year after
+establishment. The data is available in the
 [`DImodels`](https://cran.r-project.org/package=DImodels) R package. An
-analysis of the this dataset can be found in [Kirwan et al
-2009](https://doi.org/10.1890/08-1684.1). For our example we only
-consider the plots that received the 150 kg nitrogen treatment. The four
-species proportions form our compositional predictors while the annual
-yield is our continuous response.
+analysis of the this dataset can be found in [Kirwan et al.,
+2009](doi:10.1890/08-1684.1). For our example we only consider the plots
+that received the 150 kg nitrogen treatment. The four species
+proportions form our compositional predictors while the annual yield is
+our continuous response.
 
 ``` r
 data(Switzerland)
@@ -181,8 +187,7 @@ head(my_data)
 ### Fit model with compositional data
 
 We fit different models with different interaction structures as
-described in [Moral et al
-2023](https://doi.org/10.1111/2041-210X.14158).
+described in [Moral et al., 2023](doi:10.1111/2041-210X.14158).
 
 ``` r
 mod_ID <- DI(y = "yield", prop = 4:7, 
@@ -220,7 +225,7 @@ mods = list("ID" = mod_ID, "AV" = mod_AV, "FG" = mod_FG,
 model_selection(models = mods, metric = c("AIC", "AICc", "BIC", "BICc"))
 ```
 
-<img src="man/figures/README-model-selection-1.png" style="display: block; margin: auto;" />
+<img src="man/figures/README-model-selection-1.png" alt="Output from model_selection() function" style="display: block; margin: auto;" />
 
 The model `mod_FG` (labelled as “FG”) is the best model as it has the
 lowest value for all the information criteria. We proceed with this
@@ -268,7 +273,7 @@ model_diagnostics(model = mod_FG)
 #> ✔ Created all plots.
 ```
 
-<img src="man/figures/README-model-diagnostics-1.png" style="display: block; margin: auto;" />
+<img src="man/figures/README-model-diagnostics-1.png" alt="Output from model_diagnostics() function" style="display: block; margin: auto;" />
 
 Replacing the points with pie-glyphs could help us to quickly identify
 any problematic observations in the model. For example, we can see here
@@ -292,7 +297,7 @@ prediction_contributions(model = mod_FG,
 #> ✔ Created plot.
 ```
 
-<img src="man/figures/README-prediction-contributions-1.png" style="display: block; margin: auto;" />
+<img src="man/figures/README-prediction-contributions-1.png" alt="Output from prediction_contributions() function" style="display: block; margin: auto;" />
 
 The coloured bars show the contributions of the different terms in the
 model. The contribution is defined as the product of the coefficient and
@@ -329,7 +334,7 @@ gradient_change(mod_FG, data = plot_data)
 #> ✔ Created plot.
 ```
 
-<img src="man/figures/README-gradient-change-1.png" style="display: block; margin: auto;" />
+<img src="man/figures/README-gradient-change-1.png" alt="Output from gradient_change() function" style="display: block; margin: auto;" />
 
 This shows that on average the predicted response increases as richness
 increases but at a saturating rate. Run `?gradient_change` or see the
@@ -357,11 +362,11 @@ proportions is 1.
 conditional_ternary(model = mod_FG, 
                     tern_vars = c("p1", "p3", "p4"),
                     conditional = data.frame("p2" = c(0.2, 0.5, 0.8)))
-#> ✔ Finished data preparation.
+#> Preparing data ■■■■■■■■■■■■■■■■■■■■■             67% | ETA:  1s                                                                ✔ Finished data preparation.
 #> ✔ Created plot.
 ```
 
-<img src="man/figures/README-cond-ternary-1.png" style="display: block; margin: auto;" />
+<img src="man/figures/README-cond-ternary-1.png" alt="Output from conditional_ternary() function" style="display: block; margin: auto;" />
 
 This figure shows that the predicted response decreases as we increase
 the proportion of `p2` and is maximised as we increase the proportion of
@@ -391,7 +396,7 @@ visualise_effects(model = mod_FG, data = my_data[1:15, ],
 #> ✔ Created plot.
 ```
 
-<img src="man/figures/README-effects-plot-1.png" style="display: block; margin: auto;" />
+<img src="man/figures/README-effects-plot-1.png" alt="Output from visualise_effects() function" style="display: block; margin: auto;" />
 
 The grey lines show the effect (on the predicted response) of increasing
 the species of interest within a particular community while the solid
@@ -423,7 +428,7 @@ simplex_path(model = mod_FG,
 #> ✔ Created plot.
 ```
 
-<img src="man/figures/README-simplex-path-1.png" style="display: block; margin: auto;" />
+<img src="man/figures/README-simplex-path-1.png" alt="Output from simplex_path() function" style="display: block; margin: auto;" />
 
 We can see that moving from the centroid community to `p1`, `p2`, and
 `p4` decreases the predicted response, while moving towards a

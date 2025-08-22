@@ -1,0 +1,242 @@
+---
+title: "Using DImodelsVis with regression models fit using the `DImodelsMulti` R package"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Using DImodelsVis with regression models fit using the `DImodelsMulti` R package}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE, comment = "#>",
+  echo = TRUE, warning = FALSE, message = FALSE,
+  fig.width = 8, fig.height = 5, fig.align = "center",
+  class.source = "fold-show", eval = TRUE
+)
+
+library(knitr)
+
+# Hook to automatically detect the function used in the chunk and set alt text
+knit_hooks$set(plot = function(x, options) {
+  if (is.null(options$fig.alt)) {
+     # Combine the chunk code
+    code <- paste(options$code, collapse = "\n")
+    
+    # List of known functions
+    funs <- c("conditional_ternary", "grouped_ternary", "visualise_effects", "simplex_path", "gradient_change", "prediction_contributions_plot", "model_diagnostics", "model_selection")
+    pattern <- paste(funs, collapse = "|")
+    
+    # Extract first matching function
+    matches <- regmatches(code, gregexpr(pattern, code))[[1]]
+    if (length(matches) > 0) {
+      options$fig.alt <- paste0("Output from ", matches[1], "() function")
+    } else {
+      options$fig.alt <- "Plot output"
+    }
+  }
+  knitr::hook_plot_md(x, options)
+  hook_plot_md(x, options)
+})
+
+```
+
+### Loading necessary libraries
+
+```{r setup}
+library(DImodels)
+library(DImodelsVis)
+library(DImodelsMulti)
+library(dplyr)
+library(ggplot2)
+```
+
+### Data exploration
+
+#### Load data
+
+This data (henceforward referred as `Belgium`) comes from a BEF experiment conducted in Belgium as part of the wider "Agrodiversity Experiment" [Kirwan et al 2014](https://doi.org/10.6084/m9.figshare.c.3307098.v1). In this study, thirty experimental plots were established with one to four species (two grasses G1-G2 and legumes L1-L2), representing fifteen plant communities, each sown at two seeding densities. Three ecosystem function responses, namely DM yield (called `Sown`), Weed suppression (called `Weed`) and Nitrogen yield (called `N`) are recorded for each plot at a single time point and stored in the column `Y`. The data is available in the [`DImodelsMulti`](https://cran.r-project.org/package=DImodelsMulti) R package and an analysis of the this dataset can be found in [Dooley et al., 2015](https://doi.org/10.1111/ele.12504).
+
+```{r, load-data}
+head(dataBEL)
+```
+
+
+
+### Model fitting
+
+We fit the average pairwise Diversity-Interactions model to all three ecosystem functions in the `Belgium` dataset using the `DImulti()` function from the `DImodelsMulti` package. The main benefit of fitting a single model for all responses is that it allows us to capture covariances between the ecosystem functions.
+
+```{r, models}
+# Name of compositional predictors (species)
+species <- c("G1", "G2", "L1", "L2")
+# Functional groupings of species
+FG <- c("Gr", "Gr", "Le", "Le")
+# Colours to be used for pie-glyphs for all figures
+pie_cols <- get_colours(vars = species, FG = FG)
+
+model <- DImulti(prop = species, FG = FG, y = "Y", 
+                 eco_func = c("Var", "un"),
+                 unit_IDs = "Plot", DImodel = "AV",
+                 method = "REML", data = dataBEL)
+```
+
+The model coefficients are as follows
+
+```{r}
+model
+```
+
+The average interaction effect is significant for all three ecosystem functions. Additionally, sown is positively correlated with the other two ecosystem functions while Weed and N are negatively correlated. 
+
+### Model diagnostics
+
+The model diagnostics function works directly with `DImodelsMulti` model object. However, only the `"Pearson Residual vs Fitted"` and `"Qunatile-Quantile"` plots can be created for these models.
+
+```{r, model-diagnostics1, fig.height=5, fig.width=8}
+model_diagnostics(model = model, which = c(1, 2), nrow = 1)
+```
+
+There don't seem to be any strong violations of any model assumptions. The pie-glyphs indicate that mixture perform higher than the monocultures across the board.
+
+By default, all ecosystem functions are plotted in the same panel, however it is also possible to view them in separate panels as follows:
+
+```{r, model-diagnostics2, fig.height=9, fig.width=12}
+model_diagnostics(model = model, which = c(1, 2), nrow = 2) + 
+  facet_wrap(~Var)
+```
+
+
+### Model interpretation
+
+All the visualisation functions aiding with model interpretation in `DImodelsVis` integrate smoothly with statistical model objects fit using `DImodelsMulti`. The visualisations are automatically split into separate panels for each ecosystem function (or time-point) in the model by default. However, users also have the option to create the visualisations for only specific ecosystem functions (or time-points) if they desire. 
+
+
+#### Gradient-change plot
+
+We depict the average BEF relationship with respect to species richness for all three ecosystem functions.
+
+```{r, gradient-change, fig.width=12, fig.height=5}
+grad_data <- get_equi_comms(4, variables = c("G1", "G2", "L1", "L2")) %>%
+  mutate("Rich." = Richness)
+
+gradient_change(model = model, data = grad_data, nrow = 1)
+```
+
+The BEF relationship observed across all three ecosystem functions exhibits the characteristic saturating shape, where gains in function diminish as diversity increases.
+
+#### Conditional ternary plot
+
+We create conditional ternary diagram with the proportion of L1 fixed to be 0, 0.25, and 0.5.
+
+```{r, cond-tern, fig.height=10, fig.width=8}
+conditional_ternary(model = model, resolution = 1,
+                    tern_vars = c("G1", "G2", "L2"),
+                    conditional = data.frame(L1 = c(0, 0.25, 0.5)),
+                    lower_lim = 30, upper_lim = 110, nlevels = 8,
+                    nrow = 3)
+```
+
+The prediction for DM and nitrogen yield proportion of L1 increases to 0.5, while that of weed suppression decreases. 
+
+
+
+#### Grouped ternary plot
+
+We create a grouped ternary plot where the two grasses are grouped together and the total grasses proportion is split equally between G1 and G2. Additionally, till now we have been using the default option of showing the visualisations for each ecosystem function. As an example, to showcase how this can be changed, we will only show the plots for nitrogen yield and weed suppression in this example. However, note that this would be possible to do with any visualisation in the package.
+
+
+```{r, grouped-tern, fig.height=8, fig.width=4}
+grouped_ternary(model = model, resolution = 1,
+                FG = c("G", "G", "L1", "L2"),
+                # Split of species within each group
+                values = c(0.5, 0.5, 1, 1),
+                lower_lim = 30, upper_lim = 110, nlevels = 8,
+                add_var = list("Var" = c("N", "Weed")),
+                nrow = 2) # Arrange in two rows
+```
+
+The visualisation very clearly shows the trade-off between weed suppression and nitrogen yield as weed suppression is maximised by increasing the proportion of grasses while nitrogen yield is maximised by increases the proportion of legumes.
+
+
+#### Effects plot
+
+We visualise the effect of adding L1 and L2 to several equi-proportional mixtures on each ecosystem function.
+
+```{r, effects-plot, fig.height = 12, fig.width = 6}
+eff_data <- get_equi_comms(4, variables = c("G1", "G2", "L1", "L2")) 
+visualise_effects(model = model, data = eff_data, 
+                  var_interest = c("L1", "L2"), 
+                  # arrange plot in three row (one for each function)
+                  nrow = 3) 
+```
+
+This figure shows that no single species maximizes all three ecosystem functions. For example, increasing the proportion of L1 improves dry matter and nitrogen yield but leads to a marked reduction in weed suppression.
+
+
+#### Simplex path plot
+
+We depict the change in the predicted response as we move from the four-species centroid community towards each binary two-species mixture. 
+
+In addition to the standard arguments, we also show how one can create multiple plots for different levels of any non-compositional experimental treatments in the data (if used as predictors in the model). For example, suppose we had used Density as a predictor in the model and wished to visualise how does performance differ across the two seeding density levels, one could do it as follows:
+
+
+```{r, simplex-path, fig.width=10, fig.height=12}
+# The centroid community (starting point for the straight line)
+starts <- tribble( ~G1,  ~G2,  ~L1,  ~L2,
+                  0.25, 0.25, 0.25, 0.25)
+# The six binary mixtures (ending points for the straight lines)
+ends <- tribble(~G1,    ~G2,  ~L1,  ~L2,
+                  0.5,  0.5,    0,    0,
+                  0.5,    0,  0.5,    0,
+                  0.5,    0,    0,  0.5,
+                    0,  0.5,  0.5,    0,
+                    0,  0.5,    0,  0.5,
+                    0,    0,  0.5,  0.5)
+
+# Create the visualisation
+simplex_path(model = model,
+             starts = starts, ends = ends,
+             # Manually specify to create plot for Weed and N
+             add_var = list("Density" = factor(c(- 1, 1))),                nrow = 3, ncol = 2)
+```
+
+In this example, density was not included as a predictor in the model, so the two panels at different density levels appear identical. Nonetheless, the same approach could be applied in other situations when any other non-compositional variable is used as a predictor to visualise performance, across its different values. Importantly, this flexibility extends to any visualisation within the package. Furthermore, note that this would be possible to do with any visualisation in the package as well.
+
+
+
+
+#### Prediction contributions plot
+
+Currently, the prediction contributions plot does not work directly with a `DImulti` object. However, this functionality will soon be added. For the time being, here is how the prediction contributions plot can be created for a `DImulti` model. 
+
+These steps should be followed:
+1. Create a data.frame containing the species communities for which you wish to visualise prediction contributions and a column containing names of the ecosystem functions for which you wish to generate predictions (the `add_add_var()` function helps with this). Ensure this data also contains any other additional predictors from the model such as nitrogen treatment, seeding density, etc.
+2. Prepare the data needed for the prediction contributions plot using the `prediction_contributions_data()` function. The important steps here is to create a manual grouping for the coefficients using the `coeff_groups` parameter ensuring that identical coefficients repeated across functions are assigned the same group and thus share a single colour in the plot. For example, the G1 identity effect (G1_ID) or the average interaction effect (AV) across all three ecosystem functions are grouped to be a single term. This grouping can be done either by coefficient indices or their names and it is not mandatory to group all coefficients. The user can decide a grouping that best suits their example.
+3. Pass the prepared data to the `prediction_contributions_plot()` function to visualise the prediction contributions.
+
+```{r, pred-cont, fig.width=8, fig.height=14}
+pred_data <- get_equi_comms(4, richness_lvl = c(1, 2, 4),
+                            variables = c("G1", "G2", "L1", "L2")) %>%
+  mutate(labels = c("G1_mono", "G1_mono", "G1_mono", "L2_mono",
+                    "G1-G2", "G1-L1", "G1-L2", "G2-L1", "G2-L2", "L1-L2",
+                    "Centroid")) %>% 
+  # Repeat each community across the three ecosystem functions
+  add_add_var(add_var = list("Var" = c("N", "Sown", "Weed"))) %>% 
+  mutate(G1_ID = G1, G2_ID = G2, L1_ID = L1, L2_ID = L2,
+         AV = DI_data_E_AV(prop = 1:4, data = .)$AV,
+         "Rich." = Richness)
+
+prediction_contributions_data(data = pred_data, model = model, 
+                              bar_labs = "labels",
+                              # Important to group the coefficients
+                              groups = list("G1" = 1:3, "G2" = 4:6,
+                                            "L1" = 7:9, "L2" = 10:12,
+                                            "AV" = 13:15)) %>% 
+  prediction_contributions_plot(colours = c(pie_cols, "steelblue3"),
+                                nrow = 3) +
+  facet_grid(~ Rich., scale = "free_x", space = "free_x") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1.1, vjust = 1.1))
+```
+
+The best performing monoculture differs across the three ecosystem function. However, the four species centroid mixture containing 25% of each species performs comparably or out-performs the best monoculture for each ecosystem function.

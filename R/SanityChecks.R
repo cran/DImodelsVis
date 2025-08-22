@@ -43,7 +43,7 @@ sanity_checks <- function(data = NULL, prop = NULL, responses = NULL,
   # Ensure if model is specified it is a statistical regression model
   if(!is.null(model)){
     if(!insight::is_regression_model(model)){
-      cli::cli_abort(c("{.var model} should be a statistical model obejct.",
+      cli::cli_abort(c("{.var model} should be a statistical model object.",
                        "x" = "You specified an object with class {.cls {class(model)}}"),
                      call = call)
     }
@@ -114,7 +114,7 @@ sanity_checks <- function(data = NULL, prop = NULL, responses = NULL,
       } else {
         cli::cli_abort(c("!" = "The columns containing the variables proportions
                          should sum to 1 for each row.",
-                         "i" = "Certain ros sum more than 1 currently.
+                         "i" = "Certain rows sum more than 1 currently.
                          Have you specified any additional columns not from the
                          design?"),
                        call = call)
@@ -136,8 +136,8 @@ sanity_checks <- function(data = NULL, prop = NULL, responses = NULL,
 
     # Can't facet for more than two variables
     if(length(facet) > 2){
-      cli::cli_abort(c("x" = "{.var facet} cannot contain more than two variables,
-                       as facetting is not possible for more than two variables.",
+      cli::cli_abort(c("x" = "Currently {.var facet} cannot contain more than two variables,
+                       as facetting is not supported for more than two variables.",
                        "i" = "Drop elements from {.var facet} to ensure the
                        length is one or two."),
                      call = call)
@@ -327,14 +327,14 @@ check_data_functions <- function(model, coefficients,
                   call = call)
   }
 
-  # Ensure if model is specified it is a statistical regression model
-  if(!is.null(model)){
-    if(!insight::is_regression_model(model)){
-      cli::cli_abort(c("{.var model} should be a statistical model obejct.",
-                       "x" = "You specified an object with class {.cls {class(model)}}"),
-                     call = call)
-    }
-  }
+  # # Ensure if model is specified it is a statistical regression model
+  # if(!is.null(model)){
+  #   if(!insight::is_regression_model(model)){
+  #     cli::cli_abort(c("{.var model} should be a statistical model obejct.",
+  #                      "x" = "You specified an object with class {.cls {class(model)}}"),
+  #                    call = call)
+  #   }
+  # }
 
   return(TRUE)
 }
@@ -347,7 +347,7 @@ check_data_functions <- function(model, coefficients,
 NULL
 check_add_var <- function(model = NULL, add_var = NULL, call = caller_env()){
   if(!is.null(add_var) && !is.list(add_var)){
-    cli::cli_abort(c("{.var add_var} should be a list containing the names and
+    cli::cli_abort(c("{.var add_var} should be a list or data.frame containing the names and
                      values for any additional variables other than compositional
                      variables in the model.",
                      "i" = "An example list could be as follows \n
@@ -383,30 +383,51 @@ check_add_var <- function(model = NULL, add_var = NULL, call = caller_env()){
     }
 
     add_var <- sapply(names(add_var), function(x){
-      model_var <- model_data[, x]
+      model_var <- model_data[[x]]
       value <- add_var[[x]]
-
       # If variable in model was of type factor ensure levels are specified
       levels_not_match <- if(length(levels(model_var)) != length(levels(as.factor(value)))) TRUE else FALSE
       if(inherits(model_var, "factor") && levels_not_match){
+
+
         lvl_str <- paste0(dQuote(unique(value)), collapse = ', ')
         mod_lvl <- paste0(dQuote(levels(model_var)), collapse = ', ')
-        cli::cli_abort(c("{.var {x}} was of type {.cls {class(model_var)}} in the
+
+        cli::cli_warn(c("{.var {x}} was of type {.cls {class(model_var)}} in the
                             data used to fit the model and the levels of the variable
                             specified in `add_var` do not match the levels of the
                             variable used when fitting the model.",
-                         "i" = "Specify {.var {x}}  in {.var add_var} as a
-                          {.cls factor} with the same levels as in the orignal data or
-                          the predictions could fail.",
+                         "i" = "Attempting to reconstruct the factor with same levels, however this might not always work.",
+                         "i" = "To avoid this any potential issues specify {.var {x}} in {.var add_var} as a
+                                {.cls factor} with the same levels as in the original data or
+                                the predictions could fail.",
                          "i" = "Here, {.val {x}} had levels {.val {levels(model_var)}}
                          in the data used to fit the model, but predictions are needed
                          only for levels {.val {unique(value)}}. However we'd still have
                          to specify all levels for {.val {x}} when specifying {.val {x}}
                           in {.var add_var}. Thus `add_var` would be specified as \n
                           {.code add_var({x} = factor(c({lvl_str}),
-                                                      levels = c({mod_lvl})))}
-                          "),
+                                                      levels = c({mod_lvl})))}"),
                        call = call)
+
+        value <- factor(value, levels = levels(model_var))
+
+        # cli::cli_abort(c("{.var {x}} was of type {.cls {class(model_var)}} in the
+        #                     data used to fit the model and the levels of the variable
+        #                     specified in `add_var` do not match the levels of the
+        #                     variable used when fitting the model.",
+        #                  "i" = "Specify {.var {x}}  in {.var add_var} as a
+        #                   {.cls factor} with the same levels as in the orignal data or
+        #                   the predictions could fail.",
+        #                  "i" = "Here, {.val {x}} had levels {.val {levels(model_var)}}
+        #                  in the data used to fit the model, but predictions are needed
+        #                  only for levels {.val {unique(value)}}. However we'd still have
+        #                  to specify all levels for {.val {x}} when specifying {.val {x}}
+        #                   in {.var add_var}. Thus `add_var` would be specified as \n
+        #                   {.code add_var({x} = factor(c({lvl_str}),
+        #                                               levels = c({mod_lvl})))}
+        #                   "),
+        #                call = call)
       }
       # If variable in data was of type character or factor ensure add_var is too
       if(!all(class(model_var) == class(value))){
@@ -419,6 +440,9 @@ check_add_var <- function(model = NULL, add_var = NULL, call = caller_env()){
 
         if(is.character(model_var) || is.factor(model_var)){
           value <- as.character(value)
+          if(is.factor(model_var)){
+            value <- factor(value, levels = levels(model_var))
+          }
         } else if(is.numeric(model_var)){
           value <- suppressWarnings(as.numeric(value))
 
@@ -436,7 +460,7 @@ check_add_var <- function(model = NULL, add_var = NULL, call = caller_env()){
     }, simplify = FALSE)
 
     check_values <- sapply(names(add_var), function(x){
-      model_var <- model_data[, x]
+      model_var <- model_data[[x]]
       values <- add_var[[x]]
       # Throwing error for a factor variable if value specified was not in the orignal data
       if(!is.numeric(model_var) && !all(values %in% unique(model_var))){
@@ -450,12 +474,12 @@ check_add_var <- function(model = NULL, add_var = NULL, call = caller_env()){
       cli::cli_warn(c("The values for categorical additional variable specified in
                       {.var add_var} cannot accept values not present in the data
                       used when fitting the model.",
-                      "x" = "The values specified for
+                      "x" = "Certain values specified for
                       {.var {names(check_values)[!sapply(check_values, is.logical)]}}
                       are not present in the data and will be ignored."),
                     call = call)
-      glue::glue("The following values are dropped from `add_var`,
-               {paste(paste(\"\u2022\", names(check_values)), check_values, sep = \": \", collapse = \"\\n\")}")
+      message(glue::glue("Values for the following variables are dropped from `add_var`,
+               {paste(paste(\"\u2022\", names(check_values)), collapse = \"\\n\")}"))
 
       add_var <- sapply(names(add_var), function(x){
         add_var[[x]][!add_var[[x]] %in% check_values[[x]]]
@@ -473,7 +497,7 @@ NULL
 check_coeff_groupings <- function(coefficients, groups, call = caller_env()){
   if(length(groups) > 0){
     # Ensure groups are specified as a list
-    if(!is.list(groups)){
+    if(!inherits(groups, "list")){
       cli::cli_abort(c("x" = "The coefficients groupings in {.var groups} should
                        be specified as a list.",
                        "i" = "{.var groups} is specified as {.cls {class(groups)}}."),
@@ -502,21 +526,23 @@ check_coeff_groupings <- function(coefficients, groups, call = caller_env()){
                      call = call)
     }
 
-    # Ensure the name/index specified for grouping is valid
-    if(is.numeric(elements)){
-      if(any(elements > length(coefficients))){
-        locations <- elements[elements > length(coefficients)]
-        cli::cli_abort(c("Can't group coefficients past the end.",
-                         "i" = "Location{?s} {as.character(locations)} do{?es/}n't exist.",
-                         "i" = "There are only {length(coefficients)} coefficients."),
-                       call = call)
-      }
-    } else {
-      if(any(!(elements %in% names(coefficients)))){
-        cli::cli_abort(c("Can't group coefficients that don't exist.",
-                         "i" = "Coefficient{?s} {.var {elements[!(elements %in% names(coefficients))]}}
+    for (elements in groups){
+      # Ensure the name/index specified for grouping is valid
+      if(is.numeric(elements)){
+        if(any(elements > length(coefficients))){
+          locations <- elements[elements > length(coefficients)]
+          cli::cli_abort(c("Can't group coefficients past the end.",
+                           "i" = "Location{?s} {as.character(locations)} do{?es/}n't exist.",
+                           "i" = "There are only {length(coefficients)} coefficients."),
+                         call = call)
+        }
+      } else {
+        if(any(!(elements %in% names(coefficients)))){
+          cli::cli_abort(c("Can't group coefficients that don't exist.",
+                           "i" = "Coefficient{?s} {.var {elements[!(elements %in% names(coefficients))]}}
                          do{?es/}n't exist."),
-                       call = call)
+                         call = call)
+        }
       }
     }
   }

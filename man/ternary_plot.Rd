@@ -19,7 +19,7 @@ ternary_plot(
   colours = NULL,
   lower_lim = NULL,
   upper_lim = NULL,
-  contour_text = TRUE,
+  contour_text = FALSE,
   nrow = 0,
   ncol = 0
 )
@@ -83,7 +83,7 @@ colour scale for categorical variables.}
 
 \item{contour_text}{A boolean value indicating whether to include labels on
 the contour lines showing their values
-(if `show = "contours"`). The default is \code{TRUE}.}
+(if `show = "contours"`). The default is \code{FALSE}.}
 
 \item{nrow}{Number of rows in which to arrange the final plot
 (when `add_var` is specified).}
