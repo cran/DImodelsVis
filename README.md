@@ -362,7 +362,7 @@ proportions is 1.
 conditional_ternary(model = mod_FG, 
                     tern_vars = c("p1", "p3", "p4"),
                     conditional = data.frame("p2" = c(0.2, 0.5, 0.8)))
-#> Preparing data ■■■■■■■■■■■■■■■■■■■■■             67% | ETA:  1s                                                                ✔ Finished data preparation.
+#> ✔ Finished data preparation.
 #> ✔ Created plot.
 ```
 

@@ -1,3 +1,8 @@
+# DImodelsVis 1.0.3
+
+* Updated to code base to ensure compatibility with upcoming ggplot v4.0.0
+
+
 # DImodelsVis 1.0.2
 
 * Added functionality allowing the package to work seamlessly with model objects fit using `DImodelsMulti`.
@@ -9,6 +14,7 @@
 
 * Fixed a bug that caused vignette building to fail on Fedora systems.
 * Additional bug fixes to streamline the code.
+
 
 # DImodelsVis 1.0.0
 

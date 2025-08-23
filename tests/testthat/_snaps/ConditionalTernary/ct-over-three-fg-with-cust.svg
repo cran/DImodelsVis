@@ -20,6 +20,16 @@
 <g clip-path='url(#cpMC4wMHw3MjAuMDB8MC4wMHw1NzYuMDA=)'>
 </g>
 <defs>
+  <clipPath id='cpMC4wMHw3MjAuMDB8NzQuNDB8NTAxLjYw'>
+    <rect x='0.00' y='74.40' width='720.00' height='427.21' />
+  </clipPath>
+</defs>
+<g clip-path='url(#cpMC4wMHw3MjAuMDB8NzQuNDB8NTAxLjYw)'>
+<rect x='0.00' y='74.40' width='720.00' height='427.21' style='stroke-width: 0.00; stroke: none;' />
+</g>
+<g clip-path='url(#cpMC4wMHw3MjAuMDB8MC4wMHw1NzYuMDA=)'>
+</g>
+<defs>
   <clipPath id='cpMC4wMHwzNTcuMjZ8MTIyLjI2fDQzNy42Mw=='>
     <rect x='0.00' y='122.26' width='357.26' height='315.37' />
   </clipPath>
@@ -114,23 +124,23 @@
 <g clip-path='url(#cpMC4wMHw3MjAuMDB8MC4wMHw1NzYuMDA=)'>
 <text x='146.13' y='457.80' style='font-size: 14.00px; font-family: sans;' textLength='62.26px' lengthAdjust='spacingAndGlyphs'>Prediction</text>
 <image width='360.00' height='23.04' x='213.87' y='443.30' preserveAspectRatio='none' xlink:href='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAAABCAYAAABkOJMpAAAAPUlEQVQ4jWP8dPf6f4YhAv4+OD3QTiAa/P12dqCdQDT4yzU0wvWf8s2BdgLRYNmHtwPtBKLBuicD7QLiAQAzzxDw1DkiVwAAAABJRU5ErkJggg=='/>
-<rect x='213.87' y='443.30' width='360.00' height='23.04' style='stroke-width: 0.75;' />
-<polyline points='214.47,465.88 214.47,466.34 ' style='stroke-width: 0.38;' />
-<polyline points='265.77,465.88 265.77,466.34 ' style='stroke-width: 0.38;' />
-<polyline points='316.92,465.88 316.92,466.34 ' style='stroke-width: 0.38;' />
-<polyline points='368.22,465.88 368.22,466.34 ' style='stroke-width: 0.38;' />
-<polyline points='419.52,465.88 419.52,466.34 ' style='stroke-width: 0.38;' />
-<polyline points='470.82,465.88 470.82,466.34 ' style='stroke-width: 0.38;' />
-<polyline points='521.97,465.88 521.97,466.34 ' style='stroke-width: 0.38;' />
-<polyline points='573.27,465.88 573.27,466.34 ' style='stroke-width: 0.38;' />
-<polyline points='214.47,443.76 214.47,443.30 ' style='stroke-width: 0.38;' />
-<polyline points='265.77,443.76 265.77,443.30 ' style='stroke-width: 0.38;' />
-<polyline points='316.92,443.76 316.92,443.30 ' style='stroke-width: 0.38;' />
-<polyline points='368.22,443.76 368.22,443.30 ' style='stroke-width: 0.38;' />
-<polyline points='419.52,443.76 419.52,443.30 ' style='stroke-width: 0.38;' />
-<polyline points='470.82,443.76 470.82,443.30 ' style='stroke-width: 0.38;' />
-<polyline points='521.97,443.76 521.97,443.30 ' style='stroke-width: 0.38;' />
-<polyline points='573.27,443.76 573.27,443.30 ' style='stroke-width: 0.38;' />
+<rect x='213.87' y='443.30' width='360.00' height='23.04' style='stroke-width: 1.07;' />
+<polyline points='214.47,462.89 214.47,466.34 ' style='stroke-width: 1.07;' />
+<polyline points='265.77,462.89 265.77,466.34 ' style='stroke-width: 1.07;' />
+<polyline points='316.92,462.89 316.92,466.34 ' style='stroke-width: 1.07;' />
+<polyline points='368.22,462.89 368.22,466.34 ' style='stroke-width: 1.07;' />
+<polyline points='419.52,462.89 419.52,466.34 ' style='stroke-width: 1.07;' />
+<polyline points='470.82,462.89 470.82,466.34 ' style='stroke-width: 1.07;' />
+<polyline points='521.97,462.89 521.97,466.34 ' style='stroke-width: 1.07;' />
+<polyline points='573.27,462.89 573.27,466.34 ' style='stroke-width: 1.07;' />
+<polyline points='214.47,446.76 214.47,443.30 ' style='stroke-width: 1.07;' />
+<polyline points='265.77,446.76 265.77,443.30 ' style='stroke-width: 1.07;' />
+<polyline points='316.92,446.76 316.92,443.30 ' style='stroke-width: 1.07;' />
+<polyline points='368.22,446.76 368.22,443.30 ' style='stroke-width: 1.07;' />
+<polyline points='419.52,446.76 419.52,443.30 ' style='stroke-width: 1.07;' />
+<polyline points='470.82,446.76 470.82,443.30 ' style='stroke-width: 1.07;' />
+<polyline points='521.97,446.76 521.97,443.30 ' style='stroke-width: 1.07;' />
+<polyline points='573.27,446.76 573.27,443.30 ' style='stroke-width: 1.07;' />
 <text transform='translate(217.23,477.12) rotate(-45)' text-anchor='end' style='font-size: 12.00px; font-family: sans;' textLength='30.03px' lengthAdjust='spacingAndGlyphs'>12.49</text>
 <text transform='translate(268.53,477.12) rotate(-45)' text-anchor='end' style='font-size: 12.00px; font-family: sans;' textLength='30.03px' lengthAdjust='spacingAndGlyphs'>15.77</text>
 <text transform='translate(319.68,477.12) rotate(-45)' text-anchor='end' style='font-size: 12.00px; font-family: sans;' textLength='30.03px' lengthAdjust='spacingAndGlyphs'>19.04</text>

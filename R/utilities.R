@@ -1936,4 +1936,21 @@ add_exp_str <- function(data, model){
   return(updated_newdata)
 }
 
+# Code copied over from fortify.lm
+#' @keywords internal
+#' Utility function to supplement data with information from an lm model
+#'
+#' @usage NULL
+NULL
+fortify_lm_copy <- function (model, data = model$model, ...) {
+    infl <- stats::influence(model, do.coef = FALSE)
+    data$.hat <- infl$hat
+    data$.sigma <- infl$sigma
+    data$.cooksd <- stats::cooks.distance(model, infl)
+    data$.fitted <- stats::predict(model)
+    data$.resid <- stats::resid(model)
+    data$.stdresid <- stats::rstandard(model, infl)
+    data
+}
+
 

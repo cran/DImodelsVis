@@ -26,7 +26,7 @@ test_that("Basic ternary works as expected", {
                                          prop = species, show = "points") %>%
                         suppressWarnings() %>% suppressMessages())
 
-  expect_doppelganger(title = "Ternary with poitns aesthetics",
+  expect_doppelganger(title = "Ternary with points aesthetics",
                       fig = ternary_plot(data = mod_data, prop = species,
                                          show = "points",
                                          points_size = 4,

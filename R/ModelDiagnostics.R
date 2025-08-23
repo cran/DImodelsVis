@@ -151,8 +151,11 @@ model_diagnostics <- function(model, which = c(1,2,3,5), prop = NULL, FG = NULL,
   }
 
   # Data with all diagnostic metrics added
-  if(inherits(model, "lm")){
+  if(inherits(model, "DI")){
     plot_data <- fortify(model = model)
+    attr(plot_data, "model_class") <- "lm"
+  } else if(inherits(model, "lm")){
+    plot_data <- fortify_lm_copy(model = model)
     attr(plot_data, "model_class") <- "lm"
   } else {
     if(inherits(model, "DImulti")){

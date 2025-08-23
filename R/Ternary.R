@@ -452,7 +452,7 @@ ternary_plot <- function(data, prop = NULL,
 #' @keywords internal
 #' Internal function for creating a ternary plot
 #'
-#' @importFrom ggplot2 scale_colour_gradientn scale_color_manual
+#' @importFrom ggplot2 scale_colour_gradientn scale_color_manual element_line element_rect
 #'
 #' @usage NULL
 NULL
@@ -597,12 +597,16 @@ ternary_plot_internal <- function(data, prop,
                             val
                           },
                           limits = c(lower_lim, upper_lim),
-                          show.limits = T,
+                          show.limits = TRUE,
+                          guide = guide_colorbar(
+                            # Defaults from theme since they get overridden by theme_void()
+                            theme = theme(legend.frame = ggplot2::element_rect(colour = "black", linewidth = 0.5),
+                                          legend.ticks = ggplot2::element_line(colour = "black", linewidth = 0.5))
+                          ),
                           oob = scales::censor)+
-        geom_contour(breaks = breaks, colour = 'black')+
-        guides(fill = guide_colorbar(frame.colour = 'black',
-                                     ticks.colour = 'black',
-                                     show.limits = T))+
+        geom_contour(breaks = breaks, colour = "black")+
+        # guides(fill = guide_colorbar(theme = theme(legend.frame = ggplot2::element_rect(colour = "black"),
+        #                                            legend.ticks = ggplot2::element_line(colour = "black"))))+
         theme_void()+
         theme(legend.key.size = unit(0.1, 'npc'),
               legend.key.height = unit(0.04, 'npc'),
@@ -611,7 +615,9 @@ ternary_plot_internal <- function(data, prop,
               strip.text = element_text(size =14, vjust = 0.5),
               legend.text = element_text(size = 12, angle = 45,
                                          vjust = 1.2, hjust = 1.2),
-              legend.position = "bottom") +
+              legend.position = "bottom",
+              # Default tick length from theme() in ggplot
+              legend.ticks.length = unit(0.24, "lines")) +
         labs(fill = "Prediction")
     } else {
       # Base of plot

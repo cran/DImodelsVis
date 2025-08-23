@@ -1,7 +1,7 @@
 Package: DImodelsVis
 Title: Visualising and Interpreting Statistical Models Fit to
         Compositional Data
-Version: 1.0.2
+Version: 1.0.3
 Authors@R: 
     c(person("Rishabh", "Vishwakarma", email = "vishwakr@tcd.ie", role = c("aut", "cre"),
              comment = c(ORCID = "0000-0002-4847-3494")),
@@ -23,7 +23,7 @@ VignetteBuilder: knitr
 Language: en-US
 Config/testthat/edition: 3
 NeedsCompilation: no
-Packaged: 2025-08-21 23:16:30 UTC; RVISHWAK
+Packaged: 2025-08-23 16:12:54 UTC; RVISHWAK
 Author: Rishabh Vishwakarma [aut, cre] (ORCID:
     <https://orcid.org/0000-0002-4847-3494>),
   Caroline Brophy [aut],
@@ -31,4 +31,4 @@ Author: Rishabh Vishwakarma [aut, cre] (ORCID:
   Catherine Hurley [aut]
 Maintainer: Rishabh Vishwakarma <vishwakr@tcd.ie>
 Repository: CRAN
-Date/Publication: 2025-08-22 00:20:02 UTC
+Date/Publication: 2025-08-23 22:00:45 UTC
