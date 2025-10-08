@@ -1,6 +1,5 @@
 #' @title
-#' Creating data for visualising the change in a response variable between two
-#' points in the simplex space
+#' Prepare data for visualising change in response across points in the simplex space
 #'
 #' @description
 #' This is the helper function to prepare the underlying data for visualising
@@ -215,9 +214,7 @@ simplex_path_data <- function(starts, ends, prop,
 }
 
 
-#' @title
-#' Visualising the change in a response variable between two points in
-#' the simplex space
+#' @title Visualising change in response across points in the simplex space
 #'
 #' @description
 #' The helper function for plotting the change in a response variable over a
@@ -370,9 +367,7 @@ simplex_path_plot <- function(data, prop = NULL,
   plot
 }
 
-#' @title
-#' Visualising the change in a response variable between two points in
-#' the simplex space
+#' @title DI specific for visualising change in response across points in the simplex space
 #'
 #' @description
 #' This function will prepare the underlying data and plot the results for visualising the

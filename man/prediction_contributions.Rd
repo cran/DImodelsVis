@@ -16,6 +16,8 @@ prediction_contributions(
   FG = NULL,
   interval = c("confidence", "prediction", "none"),
   bar_orientation = c("vertical", "horizontal"),
+  bar_width = 0.7,
+  eb_width = 0.7,
   facet_var = NULL,
   plot = TRUE,
   nrow = 0,
@@ -90,6 +92,10 @@ from the original \code{\link[DImodels:DI]{DI}} model object.}
 orientation of the bars. Defaults to a vertical
 orientation.}
 
+\item{bar_width}{A number between 0 and 1 indicating the width for the prediction bars. Default to 0.7.}
+
+\item{eb_width}{A number between 0 and 1 indicating the width for the error bars. Default to 0.7.}
+
 \item{facet_var}{A character string or numeric index identifying the column
 in the data to be used for faceting the plot into multiple
 panels.}
@@ -152,8 +158,9 @@ prediction_contributions(model1, data = my_comms,
                                                           "`p2:p4`", "`p3:p4`")))
 
 ## Add a prediction interval using `se = TRUE` and show bars horizontally
+## Also change width of prediction bars and error bars
 prediction_contributions(model1, data = my_comms, se = TRUE,
-                         bar_orientation = "horizontal",
+                         bar_orientation = "horizontal", bar_width = 0.5, eb_width = 0.5,
                          groups = list("Interactions" = c("`p1:p2`", "`p1:p3`",
                                                           "`p1:p4`", "`p2:p3`",
                                                           "`p2:p4`", "`p3:p4`")))

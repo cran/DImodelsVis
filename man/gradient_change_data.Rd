@@ -2,7 +2,7 @@
 % Please edit documentation in R/GradientChange.R
 \name{gradient_change_data}
 \alias{gradient_change_data}
-\title{Calculate change in predicted response over diversity gradient}
+\title{Data preparation for visualising change in response over diversity gradient}
 \usage{
 gradient_change_data(
   data,

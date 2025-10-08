@@ -2,8 +2,7 @@
 % Please edit documentation in R/utilities.R
 \name{add_prediction}
 \alias{add_prediction}
-\title{Add predictions and confidence interval to data using either
-a model object or model coefficients.}
+\title{Add predictions and uncertainty interval to data using either a model object or model coefficients.}
 \usage{
 add_prediction(
   data,

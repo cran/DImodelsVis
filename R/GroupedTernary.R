@@ -1,4 +1,4 @@
-#' @title Grouped ternary diagrams
+#' @title Prepare data for grouped ternary diagrams
 #'
 #' @description
 #' The helper function for preparing the underlying data for creating grouped
@@ -295,7 +295,7 @@ grouped_ternary_data <- function(prop, FG,
   return(cond_data)
 }
 
-#' @title Conditional ternary diagrams at functional group level
+#' @title Grouped ternary diagrams
 #'
 #' @description
 #' The helper function for plotting grouped ternary diagrams. The output of
@@ -410,7 +410,7 @@ grouped_ternary_plot <- function(data,
   return(pl)
 }
 
-#' @title Conditional ternary diagrams at functional group level
+#' @title DI specific wrapper for grouped ternary diagrams
 #'
 #' @description
 #' Grouped ternary diagrams are created by combining the proportions of the

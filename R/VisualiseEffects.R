@@ -1,9 +1,9 @@
-#' @title Prepare data for effects plots for compositional data
+#' @title Prepare data for effects plots of compositional predictors
 #'
 #' @description
 #' The helper function to create the underlying data for visualising the effect
 #' of increasing or decreasing (or both) the proportion of a variable from a
-#' set of compositional variables. This is a special case of the
+#' set of compositional predictors. This is a special case of the
 #' \code{\link{simplex_path}} function where the end points are either the
 #' monoculture (i.e. variable of interest = 1, while all others equal 0) of the
 #' variable of interest (when increasing the proportion) or a community without
@@ -362,7 +362,7 @@ visualise_effects_data <- function(data, prop, var_interest = NULL,
   return(plot_data)
 }
 
-#' @title Effects plot for compositional data
+#' @title Effects plot for compositional predictors
 #'
 #' @description
 #' The plotting function to create plots showing the effect of increasing or
@@ -511,7 +511,8 @@ visualise_effects_plot <- function(data, prop, pie_colours = NULL,
   return(plot)
 }
 
-#' @title Effects plot for compositional data
+#' @title DI specific wrapper of effects plot for compositional variables
+#'
 #' @description
 #' This function will prepare the underlying data and plot the results for visualising
 #' the effect of increasing or decreasing the proportion of a predictor variable

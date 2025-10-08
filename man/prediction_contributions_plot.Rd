@@ -10,6 +10,8 @@ prediction_contributions_plot(
   se = FALSE,
   bar_orientation = c("vertical", "horizontal"),
   facet_var = NULL,
+  bar_width = 0.7,
+  eb_width = 0.7,
   nrow = 0,
   ncol = 0
 )
@@ -37,6 +39,10 @@ orientation.}
 \item{facet_var}{A character string or numeric index identifying the column
 in the data to be used for faceting the plot into multiple
 panels.}
+
+\item{bar_width}{A number between 0 and 1 indicating the width for the prediction bars. Default to 0.7.}
+
+\item{eb_width}{A number between 0 and 1 indicating the width for the error bars. Default to 0.7.}
 
 \item{nrow}{Number of rows in which to arrange the final plot
 (when `add_var` is specified).}

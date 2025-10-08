@@ -2,7 +2,7 @@
 % Please edit documentation in R/VisualiseEffects.R
 \name{visualise_effects_data}
 \alias{visualise_effects_data}
-\title{Prepare data for effects plots for compositional data}
+\title{Prepare data for effects plots of compositional predictors}
 \usage{
 visualise_effects_data(
   data,
@@ -120,7 +120,7 @@ A data frame with the following columns appended at the end
 \description{
 The helper function to create the underlying data for visualising the effect
 of increasing or decreasing (or both) the proportion of a variable from a
-set of compositional variables. This is a special case of the
+set of compositional predictors. This is a special case of the
 \code{\link{simplex_path}} function where the end points are either the
 monoculture (i.e. variable of interest = 1, while all others equal 0) of the
 variable of interest (when increasing the proportion) or a community without

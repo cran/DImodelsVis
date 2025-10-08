@@ -1,4 +1,4 @@
-#' @title Regression diagnostics plots with pie-glyphs
+#' @title DI specific wrapper of diagnostics plots for regression models with compositional predictors
 #'
 #' @description
 #' This function returns regression diagnostics plots for a model with points
@@ -321,7 +321,7 @@ add_label <- function(pl, data, grob_obj, label_size = 4,
 }
 
 
-#' Data preparation for regression diagnostics plots with pie-glyphs
+#' @title Data preparation of diagnostics plots for regression models with compositional predictors
 #'
 #' @description
 #' This function prepares the data-frame with necessary attributes for creating
@@ -383,7 +383,7 @@ model_diagnostics_data <- function(model, prop = NULL){
   return(model_diagnostics(model = model, prop = prop, plot = FALSE))
 }
 
-#' @title Regression diagnostics plots with pie-glyphs
+#' @title Diagnostics plots for regression models with compositional predictors
 #'
 #' @description
 #' This function accepts the output of the \code{\link{model_diagnostics_data}}

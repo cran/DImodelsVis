@@ -1,8 +1,8 @@
 ---
-title: "Using DImodelsVis with regression models not fit using the DImodels package"
+title: "DImodelsVis with regression models not fit using the DImodels package"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Using DImodelsVis with regression models not fit using the DImodels package}
+  %\VignetteIndexEntry{DImodelsVis with regression models not fit using the DImodels package}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -13,7 +13,7 @@ knitr::opts_chunk$set(
   comment = "#>",
   fig.width = 6,
   fig.height = 6,
-  fig.aling = "center",
+  fig.align = "center",
   warning = FALSE
 )
 
@@ -72,9 +72,9 @@ knit_hooks$set(plot = function(x, options) {
 `DImodelsVis` is very convenient to use with regression models fit using the [`DImodels`](https://cran.r-project.org/package=DImodels) or 
 [`DImodelsMulti`](https://cran.r-project.org/package=DImodelsMulti) R packages. However, there may be situations when users need to work with highly customised and complex models that are not possible to fit using either `DImodels` or `DImodelsMulti`. Additionally, users may also desire finer control over the visualisation pipeline and seek to modify both, the plot appearance as well as the underlying data. To accommodate these needs, each visualisation function in `DImodelsVis` is paired with a separate data preparation (suffixed by `_data`) and plotting (suffixed by `_plot`) function. This separation provides great flexibility, as the data preparation functions allow users to create, modify, or extend the prepared data before visualising it, while the plotting functions enable customisation of the plot aesthetics independently. This document provides examples demonstrating how users can leverage this separation to create visualisations in a modular manner and derive insights from any regression model with compositional predictors using `DImodelsVis`. The examples shown here are created with a regression model fit using `glm` but the exact same principles would apply for creating visualisations using any other regression modelling tool kit.
 
-### Load libraries
+### Loading necessary packages
 
-The following libraries will be used for data processing and generating visualisations.
+The following R packages will be used for data processing and generating visualisations.
 
 ```{r, libraries, message=FALSE, warning=FALSE}
 library(DImodels)     # For loading the dataset
@@ -163,7 +163,7 @@ We proceed with this model and create visualisations for interpreting the result
 
 ### Visualisations
 
-The model object stored in `cust_model` will be used for creating all the visualisations shown in this section. We will follow the "Modular plotting" workflow shown on the right side in Figure 3 from the main manuscript where the data needed for each visualisation will be created first and modified as per our needs and then passed on to the respective plotting function to create the visualisation.
+The model object stored in `cust_model` will be used for creating all the visualisations shown in this section. We will follow a modular plotting workflow where the data needed for each visualisation will be created first and modified as per our needs and then passed on to the respective plotting function to create the visualisation.
 
 We first define a common set of variables which will be used across the board for ease of use
 
@@ -182,7 +182,7 @@ var_cols <- get_colours(vars = species, FG = FG)
 
 Let's first examine the model diagnostics plots for our fitted model to ensure there are no severe problems with the model assumptions. 
 
-The data needed for creating the diagnostics plot is prepared using the `model_diagnostics_data()` function. The primary difference here (and in all other functions) compared to using the "Direct plotting" functions (workflow on left site of Figure 3 in main manuscript) is that the names of the compositional predictors should to be specified in the `prop` parameter.
+The data needed for creating the diagnostics plot is prepared using the `model_diagnostics_data()` function. The primary difference here (and in all other functions) compared to using the wrapper functions designed for use with `DImodels` objects is that the names of the compositional predictors should to be specified in the `prop` parameter.
 
 ```{r, DiagData}
 diag_data <- model_diagnostics_data(

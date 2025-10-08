@@ -2,7 +2,7 @@
 % Please edit documentation in R/ModelSelection.R
 \name{model_selection}
 \alias{model_selection}
-\title{Visualising model selection}
+\title{DI specific wrapper for visualising model selection}
 \usage{
 model_selection(
   models,

@@ -1,3 +1,9 @@
+# DImodelsVis 1.0.4
+
+* Added new vignettes showcasing how to use `DImodelsVis` with different models such as random-forests, neural networks, nlme, etc.
+* Prediction contribution plots now have `bar_width` and `eb_width` parameters to allow adjusting the widths of the prediction and error bars, respectively.
+* Cleaned up package documentation a bit.
+
 # DImodelsVis 1.0.3
 
 * Updated to code base to ensure compatibility with upcoming ggplot v4.0.0

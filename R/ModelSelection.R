@@ -1,4 +1,5 @@
-#' @title Visualising model selection
+#' @title DI specific wrapper for visualising model selection
+#'
 #' @description
 #' This function helps to visualise model selection by showing a
 #' visual comparison between the information criteria for different models.

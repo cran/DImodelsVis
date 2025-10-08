@@ -2,7 +2,7 @@
 % Please edit documentation in R/GradientChange.R
 \name{gradient_change_plot}
 \alias{gradient_change_plot}
-\title{Visualise change in (predicted) response over diversity gradient}
+\title{Visualise change in response over diversity gradient}
 \usage{
 gradient_change_plot(
   data,

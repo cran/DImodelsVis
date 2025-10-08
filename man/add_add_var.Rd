@@ -2,7 +2,7 @@
 % Please edit documentation in R/utilities.R
 \name{add_add_var}
 \alias{add_add_var}
-\title{Add additional variables to the data}
+\title{Add additional variables to data via cartesian product}
 \usage{
 add_add_var(data, add_var = NULL)
 }
@@ -28,7 +28,7 @@ A data-frame with all additional columns specified in `add_var`
 }
 \description{
 Utility function for incorporating any additional variables
-into the data. Each row in the data will be replicated and
+into new data via their cartesian product. Each row in the data will be replicated and
 new columns will be added for each variable specified in
 `add_var` with values corresponding to their cartesian product.
 }

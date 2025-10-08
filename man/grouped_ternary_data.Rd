@@ -2,7 +2,7 @@
 % Please edit documentation in R/GroupedTernary.R
 \name{grouped_ternary_data}
 \alias{grouped_ternary_data}
-\title{Grouped ternary diagrams}
+\title{Prepare data for grouped ternary diagrams}
 \usage{
 grouped_ternary_data(
   prop,

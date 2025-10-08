@@ -2,7 +2,7 @@
 % Please edit documentation in R/ModelDiagnostics.R
 \name{model_diagnostics_data}
 \alias{model_diagnostics_data}
-\title{Data preparation for regression diagnostics plots with pie-glyphs}
+\title{Data preparation of diagnostics plots for regression models with compositional predictors}
 \usage{
 model_diagnostics_data(model, prop = NULL)
 }

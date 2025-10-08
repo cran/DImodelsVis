@@ -2,7 +2,7 @@
 % Please edit documentation in R/ConditionalTernary.R
 \name{conditional_ternary}
 \alias{conditional_ternary}
-\title{Conditional ternary diagrams}
+\title{DI specific wrapper for conditional ternary diagrams}
 \usage{
 conditional_ternary(
   model,

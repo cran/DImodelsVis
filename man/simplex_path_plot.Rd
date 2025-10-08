@@ -2,8 +2,7 @@
 % Please edit documentation in R/SimplexPath.R
 \name{simplex_path_plot}
 \alias{simplex_path_plot}
-\title{Visualising the change in a response variable between two points in
-the simplex space}
+\title{Visualising change in response across points in the simplex space}
 \usage{
 simplex_path_plot(
   data,

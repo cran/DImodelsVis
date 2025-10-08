@@ -69,8 +69,7 @@ test_that("Conditional ternary works as expected", {
                                                      tern_labels = c("G", "P", "P"),
                                                      axis_label_size = 8,
                                                      vertex_label_size = 6,
-                                                     nlevels = 10,
-                                                     contour_text = TRUE) %>%
+                                                     nlevels = 10) %>%
                         suppressMessages() %>% suppressWarnings())
 
   # Ensure conditional ternary works for systems with three species

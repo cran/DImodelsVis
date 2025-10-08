@@ -104,7 +104,14 @@ sanity_checks <- function(data = NULL, prop = NULL, responses = NULL,
     # Ensure the prop specified sum to 1
     comm_sum <- get_comm_sum(data, prop)
     if(!all(dplyr::near(comm_sum, 1, tol = .Machine$double.eps^0.25))){
-      if(any(comm_sum < 1)){
+      if (any(comm_sum == 0)){
+        cli::cli_warn(c("!" = "The columns containing the variable proportions
+                         sum to 0 for certain rows.",
+                         "i" = "We assumed this is by design and proceeded with
+                        data preparation/visualisation.",
+                        "i" = "Please check data if this wasn't the case."),
+                       call = call)
+      } else if(any(comm_sum < 1)){
         cli::cli_abort(c("!" = "The columns containing the variable proportions
                          should sum to 1 for each row.",
                          "i" = "Certain rows sum less than 1 currently.

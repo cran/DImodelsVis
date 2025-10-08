@@ -33,12 +33,17 @@ test_that("Sanity checks work", {
   expect_error(sanity_checks(data = iris,
                              prop = c(1:4)),
                "between 0 and 1")
-  expect_error(sanity_checks(data = get_equi_comms(3),
+  expect_error(sanity_checks(data = get_equi_comms(3)[-3,],
                              prop = c(1:2)),
                "Certain rows sum less than 1 currently.")
   expect_error(sanity_checks(data = get_equi_comms(3) %>% mutate(Richness = 0.5),
                              prop = c(1:4)),
                "Certain rows sum more than 1 currently.")
+  # Warning if props sum to 0
+  expect_warning(sanity_checks(data = get_equi_comms(3),
+                               prop = c(1:2)),
+                 "sum to 0")
+
 
   # Checks for responses
   expect_error(sanity_checks(responses = list("p", TRUE)),

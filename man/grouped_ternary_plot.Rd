@@ -2,7 +2,7 @@
 % Please edit documentation in R/GroupedTernary.R
 \name{grouped_ternary_plot}
 \alias{grouped_ternary_plot}
-\title{Conditional ternary diagrams at functional group level}
+\title{Grouped ternary diagrams}
 \usage{
 grouped_ternary_plot(
   data,

@@ -1,4 +1,4 @@
-#' @title Calculate change in predicted response over diversity gradient
+#' @title Data preparation for visualising change in response over diversity gradient
 #'
 #' @description
 #' Helper function for creating the data to visualise a scatter-plot of the
@@ -189,7 +189,7 @@ gradient_change_data <- function(data, prop, add_var = list(),
 }
 
 
-#' @title Visualise change in (predicted) response over diversity gradient
+#' @title Visualise change in response over diversity gradient
 #'
 #' @description
 #' Helper function for plotting the average (predicted) response at each level
@@ -367,7 +367,7 @@ gradient_change_plot <- function(data, prop = NULL,
 
 
 
-#' @title Visualise change in (predicted) response over diversity gradient
+#' @title DI specific wrapper for visualising change in response over diversity gradient
 #'
 #' @description
 #' A scatter-plot of the predicted response (or raw response) over a diversity

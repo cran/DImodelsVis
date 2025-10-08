@@ -2,7 +2,7 @@
 % Please edit documentation in R/GroupedTernary.R
 \name{grouped_ternary}
 \alias{grouped_ternary}
-\title{Conditional ternary diagrams at functional group level}
+\title{DI specific wrapper for grouped ternary diagrams}
 \usage{
 grouped_ternary(
   model,

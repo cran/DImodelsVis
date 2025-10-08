@@ -2,7 +2,7 @@
 % Please edit documentation in R/VisualiseEffects.R
 \name{visualise_effects_plot}
 \alias{visualise_effects_plot}
-\title{Effects plot for compositional data}
+\title{Effects plot for compositional predictors}
 \usage{
 visualise_effects_plot(
   data,

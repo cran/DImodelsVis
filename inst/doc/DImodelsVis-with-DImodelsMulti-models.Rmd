@@ -1,8 +1,8 @@
 ---
-title: "Using DImodelsVis with regression models fit using the `DImodelsMulti` R package"
+title: "DImodelsVis with regression models fit using the DImodelsMulti R package"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Using DImodelsVis with regression models fit using the `DImodelsMulti` R package}
+  %\VignetteIndexEntry{DImodelsVis with regression models fit using the DImodelsMulti R package}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -41,7 +41,7 @@ knit_hooks$set(plot = function(x, options) {
 
 ```
 
-### Loading necessary libraries
+### Loading necessary packages
 
 ```{r setup}
 library(DImodels)

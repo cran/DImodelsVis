@@ -2,7 +2,7 @@
 % Please edit documentation in R/VisualiseEffects.R
 \name{visualise_effects}
 \alias{visualise_effects}
-\title{Effects plot for compositional data}
+\title{DI specific wrapper of effects plot for compositional variables}
 \usage{
 visualise_effects(
   model,

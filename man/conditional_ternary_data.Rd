@@ -2,7 +2,7 @@
 % Please edit documentation in R/ConditionalTernary.R
 \name{conditional_ternary_data}
 \alias{conditional_ternary_data}
-\title{Conditional ternary diagrams}
+\title{Data preparation for conditional ternary diagrams}
 \usage{
 conditional_ternary_data(
   prop,

@@ -2,7 +2,7 @@
 % Please edit documentation in R/ModelDiagnostics.R
 \name{model_diagnostics}
 \alias{model_diagnostics}
-\title{Regression diagnostics plots with pie-glyphs}
+\title{DI specific wrapper of diagnostics plots for regression models with compositional predictors}
 \usage{
 model_diagnostics(
   model,

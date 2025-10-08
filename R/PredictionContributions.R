@@ -403,6 +403,7 @@ prediction_contributions_data <- function(data, model = NULL, coefficients = NUL
 prediction_contributions_plot <- function(data, colours = NULL, se = FALSE,
                                           bar_orientation = c("vertical", "horizontal"),
                                           facet_var = NULL,
+                                          bar_width = 0.7, eb_width = 0.7,
                                           nrow = 0, ncol = 0){
   # Ensure data is specified
   if(missing(data)){
@@ -423,6 +424,7 @@ prediction_contributions_plot <- function(data, colours = NULL, se = FALSE,
                       plot <- prediction_contributions_plot_internal(data = data_iter,
                                                                      colours = colours,
                                                                      se = se, facet_var = facet_var,
+                                                                     bar_width = bar_width, eb_width = eb_width,
                                                                      bar_orientation = bar_orientation) +
                         labs(subtitle = ids[i])
                     })
@@ -435,6 +437,7 @@ prediction_contributions_plot <- function(data, colours = NULL, se = FALSE,
   } else {
     plot <- prediction_contributions_plot_internal(data = data, colours = colours,
                                                    se = se, facet_var = facet_var,
+                                                   bar_width = bar_width, eb_width = eb_width,
                                                    bar_orientation = bar_orientation)
     cli::cli_alert_success("Created plot.")
   }
@@ -533,6 +536,8 @@ prediction_contributions_plot <- function(data, colours = NULL, se = FALSE,
 #' @param facet_var A character string or numeric index identifying the column
 #'                  in the data to be used for faceting the plot into multiple
 #'                  panels.
+#' @param bar_width A number between 0 and 1 indicating the width for the prediction bars. Default to 0.7.
+#' @param eb_width A number between 0 and 1 indicating the width for the error bars. Default to 0.7.
 #' @param interval Type of interval to calculate:
 #'  \describe{
 #'    \item{"none"}{No interval to be calculated.}
@@ -573,8 +578,9 @@ prediction_contributions_plot <- function(data, colours = NULL, se = FALSE,
 #'                                                           "`p2:p4`", "`p3:p4`")))
 #'
 #' ## Add a prediction interval using `se = TRUE` and show bars horizontally
+#' ## Also change width of prediction bars and error bars
 #' prediction_contributions(model1, data = my_comms, se = TRUE,
-#'                          bar_orientation = "horizontal",
+#'                          bar_orientation = "horizontal", bar_width = 0.5, eb_width = 0.5,
 #'                          groups = list("Interactions" = c("`p1:p2`", "`p1:p3`",
 #'                                                           "`p1:p4`", "`p2:p3`",
 #'                                                           "`p2:p4`", "`p3:p4`")))
@@ -622,6 +628,7 @@ prediction_contributions <- function(model, data = NULL,
                                      colours = NULL, se = FALSE, FG = NULL,
                                      interval = c("confidence", "prediction", "none"),
                                      bar_orientation = c("vertical", "horizontal"),
+                                     bar_width = 0.7, eb_width = 0.7,
                                      facet_var = NULL, plot = TRUE,
                                      nrow = 0, ncol = 0){
   # Ensure specified model is fit using the DI function
@@ -742,6 +749,7 @@ prediction_contributions <- function(model, data = NULL,
                                           colours = colours,
                                           se = se, facet_var = facet_var,
                                           bar_orientation = bar_orientation,
+                                          bar_width = bar_width, eb_width = eb_width,
                                           nrow = nrow, ncol = ncol)
     return(plot)
   } else {
@@ -758,10 +766,13 @@ NULL
 prediction_contributions_plot_internal <- function(data, colours = NULL,
                                                    se = FALSE,
                                                    bar_orientation = c("vertical", "horizontal"),
-                                                   facet_var = NULL){
+                                                   facet_var = NULL,
+                                                   bar_width = 0.7, eb_width = 0.7){
   # Sanity checks before creating the plot
   sanity_checks(data = data, colours = colours,
-                booleans = list("se" = se))
+                booleans = list("se" = se),
+                numerics = list("bar_width" = bar_width,
+                                "eb_width" = eb_width))
   check_plot_data(data = data,
                   cols_to_check = c(".Community", ".Value", ".Contributions"),
                   calling_fun = "prediction_contributions")
@@ -795,7 +806,7 @@ prediction_contributions_plot_internal <- function(data, colours = NULL,
 
   plot <- ggplot(data, aes(x = .data$.Community, y = .data$.Value,
                            fill = fct_rev(fct_inorder(.data$.Contributions))))+
-    geom_col(colour = "black")+
+    geom_col(colour = "black", width = bar_width)+
     theme_DI()+
     scale_fill_manual(values = rev(colours))+
     guides(fill = guide_legend(reverse = TRUE)) +
@@ -813,7 +824,8 @@ prediction_contributions_plot_internal <- function(data, colours = NULL,
       geom_errorbar(aes(y = .data$.Pred,
                         ymin = .data$.Lower,
                         ymax = .data$.Upper),
-                    colour = "black")
+                    colour = "black",
+                    width = eb_width)
   }
 
   if(bar_orientation == "horizontal"){

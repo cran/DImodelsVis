@@ -2,7 +2,7 @@
 % Please edit documentation in R/GradientChange.R
 \name{gradient_change}
 \alias{gradient_change}
-\title{Visualise change in (predicted) response over diversity gradient}
+\title{DI specific wrapper for visualising change in response over diversity gradient}
 \usage{
 gradient_change(
   model,

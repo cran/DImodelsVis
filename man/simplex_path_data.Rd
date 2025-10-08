@@ -2,8 +2,7 @@
 % Please edit documentation in R/SimplexPath.R
 \name{simplex_path_data}
 \alias{simplex_path_data}
-\title{Creating data for visualising the change in a response variable between two
-points in the simplex space}
+\title{Prepare data for visualising change in response across points in the simplex space}
 \usage{
 simplex_path_data(starts, ends, prop, add_var = list(), prediction = TRUE, ...)
 }

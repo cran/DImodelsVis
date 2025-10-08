@@ -1,4 +1,4 @@
-#' @title Conditional ternary diagrams
+#' @title Data preparation for conditional ternary diagrams
 #'
 #' @description
 #' The helper function for preparing the underlying data for creating conditional
@@ -466,7 +466,7 @@ conditional_ternary_plot <- function(data,
   return(plot)
 }
 
-#' @title Conditional ternary diagrams
+#' @title DI specific wrapper for conditional ternary diagrams
 #'
 #' @description
 #' We fix \eqn{n-3} variables to have a constant value \eqn{p_1, p_2, p_3, ... p_{n-3}}

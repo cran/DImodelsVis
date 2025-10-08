@@ -722,7 +722,7 @@ ternary_plot_internal <- function(data, prop,
     if(show == "contours" && contour_text){
       pl <- pl +
         geom_text_contour(skip=0, breaks = breaks,
-                          label.placer = metR::label_placer_fraction(0.15),
+                          label.placer = metR::label_placer_flattest(),
                           size=3.5, nudge_x = 0.015, nudge_y = 0.015)
 
     }

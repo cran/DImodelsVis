@@ -2,8 +2,7 @@
 % Please edit documentation in R/SimplexPath.R
 \name{simplex_path}
 \alias{simplex_path}
-\title{Visualising the change in a response variable between two points in
-the simplex space}
+\title{DI specific for visualising change in response across points in the simplex space}
 \usage{
 simplex_path(
   model,

@@ -1,8 +1,8 @@
-#' @title Add additional variables to the data
+#' @title Add additional variables to data via cartesian product
 #'
 #' @description
 #' Utility function for incorporating any additional variables
-#' into the data. Each row in the data will be replicated and
+#' into new data via their cartesian product. Each row in the data will be replicated and
 #' new columns will be added for each variable specified in
 #' `add_var` with values corresponding to their cartesian product.
 #'
@@ -648,13 +648,12 @@ theme_DI <- function (font_size = 14, font_family = "",
 }
 
 
-#' @title Add interaction terms used in a Diversity-Interactions (DI) model to new data
+
+#' @rdname DI_ID_and_ints
+#' @title Add identity and interaction terms used in a Diversity-Interactions (DI) model to new data
 #'
-#' @importFrom DImodels DI_data
-#' @importFrom stats coef
-#'
-#' @param data A data-frame with species proportions that sum to 1 to create
-#'             the appropriate interaction structures.
+#' @param data A data-frame with species proportions that sum to 1 to
+#'             create the identity effect groupings.
 #' @param model A Diversity Interactions model object fit using the
 #'              \code{\link[DImodels:DI]{DI()}} or \code{\link[DImodels:autoDI]{autoDI()}}
 #'              functions from the \code{\link[DImodels:DImodels-package]{DImodels}}
@@ -662,14 +661,77 @@ theme_DI <- function (font_size = 14, font_family = "",
 #'              \code{\link[DImodelsMulti:DImodelsMulti]{DImodelsMulti}} R packages.
 #'
 #' @description
-#' Utility function that accepts a fitted Diversity-Interactions (DI) model
-#' object along with a data frame and adds the necessary interaction structures to
-#' the data for making predictions using the model object specified in `model`.
+#' Utility functions that accept a fitted Diversity-Interactions (DI) model
+#' object along with a data frame and adds the necessary identity and interaction structures to
+#' the data for making predictions using the model object specified in \code{`model`}.
 #'
 #' @return
 #' The original data-frame with additional columns appended at the end
-#' describing the interactions terms present in the model object.
+#' describing the identity and interactions terms present in the model object.
 #'
+#' @export
+#'
+#' @examples
+#' library(DImodels)
+#' data(sim1)
+#'
+#' # Fit DI models with different ID effect groupings
+#' mod1 <- DI(y = "response", prop = 3:6,
+#'            data = sim1, DImodel = "AV") # No ID grouping
+#' mod2 <- DI(y = "response", prop = 3:6,
+#'            data = sim1, DImodel = "AV",
+#'            ID = c("ID1", "ID1", "ID2", "ID2"))
+#' mod3 <- DI(y = "response", prop = 3:6,
+#'            data = sim1, DImodel = "AV",
+#'            ID = c("ID1", "ID1", "ID1", "ID1"))
+#'
+#' # Create new data for adding interaction terms
+#' newdata <- sim1[sim1$block == 1, 3:6]
+#' print(head(newdata))
+#'
+#' add_ID_terms(data = newdata, model = mod1)
+#' add_ID_terms(data = newdata, model = mod2)
+#' add_ID_terms(data = newdata, model = mod3)
+add_ID_terms <- function(data, model){
+  if(missing(data)){
+    cli::cli_abort(c("{.var data} cannot be empty.",
+                     "i" = "Specify a data-frame or tibble containing species
+                     proportions that sum to 1 to create the appropriate
+                     interaction structures."))
+  }
+
+  if(missing(model)){
+    cli::cli_abort(c("{.var model} cannot be empty.",
+                     "i" = "Specify a model object fit using the
+                     {.help [{.pkg DImodels}](DImodels::DImodels)} or
+                     {.help [{.pkg DImodelsMulti}](DImodelsMulti::DImodelsMulti)}
+                     R packages."))
+  }
+
+  # Ensure model is a DImodels object
+  sanity_checks(DImodel = model, data = data)
+
+  DImodel_tag <- attr(model, "DImodel")
+  if (DImodel_tag == "CUSTOM") {
+    cli::cli_warn(c("!" = "Cannot add identity terms for a custom DI model.",
+                    "i"= "Returning original data-frame"))
+    return(data)
+  }
+
+  # Get original species proportion columns
+  prop <- attr(model, "prop")
+
+  # Check species proportions in the data sum to 1
+  sanity_checks(data = data, prop = prop)
+
+  ID <- attr(model, "ID")
+
+  data <-  group_prop(data = data, prop = prop, FG = ID)
+
+  return(data)
+}
+
+#' @rdname DI_ID_and_ints
 #' @export
 #'
 #' @examples
@@ -739,8 +801,8 @@ add_interaction_terms <- function(data, model){
     else {
       theta_value <- 1
     }
-    extra_variables <- DI_data(prop = prop, FG = eval(model$DIcall$FG),
-                               data = data, theta = theta_value, what = DImodel_tag)
+    extra_variables <- DImodels::DI_data(prop = prop, FG = eval(model$DIcall$FG),
+                                         data = data, theta = theta_value, what = DImodel_tag)
     if (DImodel_tag == "E") {
       updated_data <- data.frame(data, E = extra_variables)
     }
@@ -768,90 +830,7 @@ add_interaction_terms <- function(data, model){
   return(updated_data)
 }
 
-#' @title Add identity effect groups used in a Diversity-Interactions (DI) model to new data
-#'
-#' @param data A data-frame with species proportions that sum to 1 to
-#'             create the identity effect groupings.
-#' @param model A Diversity Interactions model object fit using the
-#'              \code{\link[DImodels:DI]{DI()}} or \code{\link[DImodels:autoDI]{autoDI()}}
-#'              functions from the \code{\link[DImodels:DImodels-package]{DImodels}}
-#'              or \code{\link[DImodelsMulti:DImulti]{DImulti()}} from the
-#'              \code{\link[DImodelsMulti:DImodelsMulti]{DImodelsMulti}} R packages.
-#'
-#' @description
-#' Utility function that accepts a fitted Diversity-Interactions (DI) model
-#' object along with a data frame and adds the appropriate species identity
-#' effect groupings to the data for making predictions.
-#'
-#' @return
-#' A data-frame with additional columns appended to the end that contain
-#' the grouped species proportions.
-#'
-#' @export
-#'
-#' @examples
-#' library(DImodels)
-#' data(sim1)
-#'
-#' # Fit DI models with different ID effect groupings
-#' mod1 <- DI(y = "response", prop = 3:6,
-#'            data = sim1, DImodel = "AV") # No ID grouping
-#' mod2 <- DI(y = "response", prop = 3:6,
-#'            data = sim1, DImodel = "AV",
-#'            ID = c("ID1", "ID1", "ID2", "ID2"))
-#' mod3 <- DI(y = "response", prop = 3:6,
-#'            data = sim1, DImodel = "AV",
-#'            ID = c("ID1", "ID1", "ID1", "ID1"))
-#'
-#' # Create new data for adding interaction terms
-#' newdata <- sim1[sim1$block == 1, 3:6]
-#' print(head(newdata))
-#'
-#' add_ID_terms(data = newdata, model = mod1)
-#' add_ID_terms(data = newdata, model = mod2)
-#' add_ID_terms(data = newdata, model = mod3)
-add_ID_terms <- function(data, model){
-  if(missing(data)){
-    cli::cli_abort(c("{.var data} cannot be empty.",
-                     "i" = "Specify a data-frame or tibble containing species
-                     proportions that sum to 1 to create the appropriate
-                     interaction structures."))
-  }
-
-  if(missing(model)){
-    cli::cli_abort(c("{.var model} cannot be empty.",
-                     "i" = "Specify a model object fit using the
-                     {.help [{.pkg DImodels}](DImodels::DImodels)} or
-                     {.help [{.pkg DImodelsMulti}](DImodelsMulti::DImodelsMulti)}
-                     R packages."))
-  }
-
-  # Ensure model is a DImodels object
-  sanity_checks(DImodel = model, data = data)
-
-  DImodel_tag <- attr(model, "DImodel")
-  if (DImodel_tag == "CUSTOM") {
-    cli::cli_warn(c("!" = "Cannot add identity terms for a custom DI model.",
-                    "i"= "Returning original data-frame"))
-    return(data)
-  }
-
-  # Get original species proportion columns
-  prop <- attr(model, "prop")
-
-  # Check species proportions in the data sum to 1
-  sanity_checks(data = data, prop = prop)
-
-  ID <- attr(model, "ID")
-
-  data <-  group_prop(data = data, prop = prop, FG = ID)
-
-  return(data)
-}
-
-
-#' @title Add predictions and confidence interval to data using either
-#' a model object or model coefficients.
+#' @title Add predictions and uncertainty interval to data using either a model object or model coefficients.
 #'
 #' @description
 #' This function accepts a data.frame and either a model object or coefficients

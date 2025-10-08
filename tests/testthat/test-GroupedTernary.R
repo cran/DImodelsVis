@@ -77,8 +77,7 @@ test_that("Grouped ternary works as expected", {
                                                  tern_labels = c("G", "P", "P"),
                                                  axis_label_size = 8,
                                                  vertex_label_size = 6,
-                                                 nlevels = 10,
-                                                 contour_text = TRUE) %>%
+                                                 nlevels = 10) %>%
                         suppressMessages() %>% suppressWarnings())
 
 })
